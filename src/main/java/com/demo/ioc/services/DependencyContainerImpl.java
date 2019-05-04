@@ -15,7 +15,7 @@ public class DependencyContainerImpl implements DependencyContainer {
 
     private boolean isInit;
 
-    private List<ServiceDetails<?>> servicesAndBeans;
+    private List<ServiceDetails> servicesAndBeans;
 
     private ObjectInstantiationService instantiationService;
 
@@ -24,7 +24,7 @@ public class DependencyContainerImpl implements DependencyContainer {
     }
 
     @Override
-    public void init(List<ServiceDetails<?>> servicesAndBeans, ObjectInstantiationService instantiationService) throws AlreadyInitializedException {
+    public void init(List<ServiceDetails> servicesAndBeans, ObjectInstantiationService instantiationService) throws AlreadyInitializedException {
         if (this.isInit) {
             throw new AlreadyInitializedException(ALREADY_INITIALIZED_MSG);
         }
@@ -36,26 +36,26 @@ public class DependencyContainerImpl implements DependencyContainer {
     }
 
     @Override
-    public <T> void reload(ServiceDetails<T> serviceDetails, boolean reloadDependantServices) {
+    public <T> void reload(ServiceDetails serviceDetails, boolean reloadDependantServices) {
         this.instantiationService.destroyInstance(serviceDetails);
         this.handleReload(serviceDetails);
 
         if (reloadDependantServices) {
-            for (ServiceDetails<?> dependantService : serviceDetails.getDependantServices()) {
+            for (ServiceDetails dependantService : serviceDetails.getDependantServices()) {
                 this.reload(dependantService, reloadDependantServices);
             }
         }
     }
 
-    private void handleReload(ServiceDetails<?> serviceDetails) {
+    private void handleReload(ServiceDetails serviceDetails) {
         if (serviceDetails instanceof ServiceBeanDetails) {
-            this.instantiationService.createBeanInstance((ServiceBeanDetails<?>) serviceDetails);
+            this.instantiationService.createBeanInstance((ServiceBeanDetails) serviceDetails);
         } else {
             this.instantiationService.createInstance(serviceDetails, this.collectDependencies(serviceDetails));
         }
     }
 
-    private Object[] collectDependencies(ServiceDetails<?> serviceDetails) {
+    private Object[] collectDependencies(ServiceDetails serviceDetails) {
         Class<?>[] parameterTypes = serviceDetails.getTargetConstructor().getParameterTypes();
         Object[] dependencyInstances = new Object[parameterTypes.length];
 
@@ -74,7 +74,7 @@ public class DependencyContainerImpl implements DependencyContainer {
     @SuppressWarnings("unchecked")
     @Override
     public <T> T reload(T service, boolean reloadDependantServices) {
-        ServiceDetails<T> serviceDetails = (ServiceDetails<T>) this.getServiceDetails(service.getClass());
+        ServiceDetails serviceDetails = (ServiceDetails) this.getServiceDetails(service.getClass());
 
         if (serviceDetails == null) {
             return null;
@@ -82,15 +82,16 @@ public class DependencyContainerImpl implements DependencyContainer {
 
         this.reload(serviceDetails, reloadDependantServices);
 
-        return serviceDetails.getInstance();
+        return (T) serviceDetails.getInstance();
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public <T> T getService(Class<T> serviceType) {
-        ServiceDetails<T> serviceDetails = this.getServiceDetails(serviceType);
+        ServiceDetails serviceDetails = this.getServiceDetails(serviceType);
 
         if (serviceDetails != null) {
-            return serviceDetails.getInstance();
+            return (T) serviceDetails.getInstance();
         }
 
         return null;
@@ -98,14 +99,14 @@ public class DependencyContainerImpl implements DependencyContainer {
 
     @SuppressWarnings("unchecked")
     @Override
-    public <T> ServiceDetails<T> getServiceDetails(Class<T> serviceType) {
-        return (ServiceDetails<T>) this.servicesAndBeans.stream()
+    public <T> ServiceDetails getServiceDetails(Class<T> serviceType) {
+        return (ServiceDetails) this.servicesAndBeans.stream()
                 .filter(sd -> serviceType.isAssignableFrom(sd.getServiceType()))
                 .findFirst().orElse(null);
     }
 
     @Override
-    public List<ServiceDetails<?>> getServicesByAnnotation(Class<? extends Annotation> annotationType) {
+    public List<ServiceDetails> getServicesByAnnotation(Class<? extends Annotation> annotationType) {
         return this.servicesAndBeans.stream()
                 .filter(sd -> sd.getAnnotation().annotationType() == annotationType)
                 .collect(Collectors.toList());
@@ -119,7 +120,7 @@ public class DependencyContainerImpl implements DependencyContainer {
     }
 
     @Override
-    public List<ServiceDetails<?>> getAllServiceDetails() {
+    public List<ServiceDetails> getAllServiceDetails() {
         return Collections.unmodifiableList(this.servicesAndBeans);
     }
 }

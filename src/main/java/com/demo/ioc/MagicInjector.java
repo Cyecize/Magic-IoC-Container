@@ -41,15 +41,15 @@ public class MagicInjector {
 
         Set<Class<?>> locatedClasses = classLocator.locateClasses(directory.getDirectory());
 
-        Set<ServiceDetails<?>> mappedServices = scanningService.mapServices(locatedClasses);
-        List<ServiceDetails<?>> serviceDetails = instantiationService.instantiateServicesAndBeans(mappedServices);
+        Set<ServiceDetails> mappedServices = scanningService.mapServices(locatedClasses);
+        List<ServiceDetails> serviceDetails = instantiationService.instantiateServicesAndBeans(mappedServices);
 
         dependencyContainer.init(serviceDetails, objectInstantiationService);
         runStartUpMethod(startupClass);
     }
 
     private static void runStartUpMethod(Class<?> startupClass) {
-        ServiceDetails<?> serviceDetails = dependencyContainer.getServiceDetails(startupClass);
+        ServiceDetails serviceDetails = dependencyContainer.getServiceDetails(startupClass);
 
         for (Method declaredMethod : serviceDetails.getServiceType().getDeclaredMethods()) {
             if (declaredMethod.getParameterCount() != 0 ||

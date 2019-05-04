@@ -8,9 +8,9 @@ import java.util.List;
 
 public interface DependencyContainer {
 
-    void init(List<ServiceDetails<?>> servicesAndBeans, ObjectInstantiationService instantiationService) throws AlreadyInitializedException;
+    void init(List<ServiceDetails> servicesAndBeans, ObjectInstantiationService instantiationService) throws AlreadyInitializedException;
 
-    <T> void reload(ServiceDetails<T> serviceDetails, boolean reloadDependantServices);
+    <T> void reload(ServiceDetails serviceDetails, boolean reloadDependantServices);
 
     <T> T reload(T service);
 
@@ -18,11 +18,11 @@ public interface DependencyContainer {
 
     <T> T getService(Class<T> serviceType);
 
-    <T> ServiceDetails<T> getServiceDetails(Class<T> serviceType);
+    <T> ServiceDetails getServiceDetails(Class<T> serviceType);
 
-    List<ServiceDetails<?>> getServicesByAnnotation(Class<? extends Annotation> annotationType);
+    List<ServiceDetails> getServicesByAnnotation(Class<? extends Annotation> annotationType);
 
     List<Object> getAllServices();
 
-    List<ServiceDetails<?>> getAllServiceDetails();
+    List<ServiceDetails> getAllServiceDetails();
 }

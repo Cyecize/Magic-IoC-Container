@@ -24,7 +24,7 @@ public class ServicesInstantiationServiceImpl implements ServicesInstantiationSe
 
     private final List<Class<?>> allAvailableClasses;
 
-    private final List<ServiceDetails<?>> instantiatedServices;
+    private final List<ServiceDetails> instantiatedServices;
 
     public ServicesInstantiationServiceImpl(InstantiationConfiguration configuration, ObjectInstantiationService instantiationService) {
         this.configuration = configuration;
@@ -35,7 +35,7 @@ public class ServicesInstantiationServiceImpl implements ServicesInstantiationSe
     }
 
     @Override
-    public List<ServiceDetails<?>> instantiateServicesAndBeans(Set<ServiceDetails<?>> mappedServices) throws ServiceInstantiationException {
+    public List<ServiceDetails> instantiateServicesAndBeans(Set<ServiceDetails> mappedServices) throws ServiceInstantiationException {
         this.init(mappedServices);
         this.checkForMissingServices(mappedServices);
 
@@ -49,7 +49,7 @@ public class ServicesInstantiationServiceImpl implements ServicesInstantiationSe
             EnqueuedServiceDetails enqueuedServiceDetails = this.enqueuedServiceDetails.removeFirst();
 
             if (enqueuedServiceDetails.isResolved()) {
-                ServiceDetails<?> serviceDetails = enqueuedServiceDetails.getServiceDetails();
+                ServiceDetails serviceDetails = enqueuedServiceDetails.getServiceDetails();
                 Object[] dependencyInstances = enqueuedServiceDetails.getDependencyInstances();
 
                 this.instantiationService.createInstance(serviceDetails, dependencyInstances);
@@ -64,15 +64,15 @@ public class ServicesInstantiationServiceImpl implements ServicesInstantiationSe
         return this.instantiatedServices;
     }
 
-    private void registerBeans(ServiceDetails<?> serviceDetails) {
+    private void registerBeans(ServiceDetails serviceDetails) {
         for (Method beanMethod : serviceDetails.getBeans()) {
-            ServiceBeanDetails<?> beanDetails = new ServiceBeanDetails<>(beanMethod.getReturnType(), beanMethod, serviceDetails);
+            ServiceBeanDetails beanDetails = new ServiceBeanDetails(beanMethod.getReturnType(), beanMethod, serviceDetails);
             this.instantiationService.createBeanInstance(beanDetails);
             this.registerInstantiatedService(beanDetails);
         }
     }
 
-    private void registerInstantiatedService(ServiceDetails<?> serviceDetails) {
+    private void registerInstantiatedService(ServiceDetails serviceDetails) {
         if (!(serviceDetails instanceof ServiceBeanDetails)) {
             this.updatedDependantServices(serviceDetails);
         }
@@ -86,9 +86,9 @@ public class ServicesInstantiationServiceImpl implements ServicesInstantiationSe
         }
     }
 
-    private void updatedDependantServices(ServiceDetails<?> newService) {
+    private void updatedDependantServices(ServiceDetails newService) {
         for (Class<?> parameterType : newService.getTargetConstructor().getParameterTypes()) {
-            for (ServiceDetails<?> serviceDetails : this.instantiatedServices) {
+            for (ServiceDetails serviceDetails : this.instantiatedServices) {
                 if (parameterType.isAssignableFrom(serviceDetails.getServiceType())) {
                     serviceDetails.addDependantService(newService);
                 }
@@ -96,8 +96,8 @@ public class ServicesInstantiationServiceImpl implements ServicesInstantiationSe
         }
     }
 
-    private void checkForMissingServices(Set<ServiceDetails<?>> mappedServices) throws ServiceInstantiationException {
-        for (ServiceDetails<?> serviceDetails : mappedServices) {
+    private void checkForMissingServices(Set<ServiceDetails> mappedServices) throws ServiceInstantiationException {
+        for (ServiceDetails serviceDetails : mappedServices) {
             for (Class<?> parameterType : serviceDetails.getTargetConstructor().getParameterTypes()) {
                 if (!this.isAssignableTypePresent(parameterType)) {
                     throw new ServiceInstantiationException(
@@ -121,12 +121,12 @@ public class ServicesInstantiationServiceImpl implements ServicesInstantiationSe
         return false;
     }
 
-    private void init(Set<ServiceDetails<?>> mappedServices) {
+    private void init(Set<ServiceDetails> mappedServices) {
         this.enqueuedServiceDetails.clear();
         this.allAvailableClasses.clear();
         this.instantiatedServices.clear();
 
-        for (ServiceDetails<?> serviceDetails : mappedServices) {
+        for (ServiceDetails serviceDetails : mappedServices) {
             this.enqueuedServiceDetails.add(new EnqueuedServiceDetails(serviceDetails));
             this.allAvailableClasses.add(serviceDetails.getServiceType());
             this.allAvailableClasses.addAll(Arrays.stream(serviceDetails.getBeans())
