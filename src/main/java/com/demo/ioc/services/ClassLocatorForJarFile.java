@@ -11,7 +11,23 @@ import java.util.Set;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
+/**
+ * ClassLocator implementation for jar files.
+ * <p>
+ * Creates a JarFile object from the jar file from which the application is
+ * executed and filters those entries have are class files.
+ */
 public class ClassLocatorForJarFile implements ClassLocator {
+
+    /**
+     * Creates JarFile from the given directory.
+     *
+     * Iterates all entries and checks if the entry name ends with ".class".
+     * If that is the case, adds the class to a set of located classes.
+     *
+     * @param directory the given directory to the jar file.
+     * @return a set of located classes.
+     */
     @Override
     public Set<Class<?>> locateClasses(String directory) throws ClassLocationException {
         final Set<Class<?>> locatedClasses = new HashSet<>();

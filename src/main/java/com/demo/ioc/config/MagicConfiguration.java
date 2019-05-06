@@ -7,11 +7,11 @@ public class MagicConfiguration {
 
     private final CustomAnnotationsConfiguration annotations;
 
-    private final InstantiationConfiguration instantitations;
+    private final InstantiationConfiguration instantiations;
 
     public MagicConfiguration() {
         this.annotations = new CustomAnnotationsConfiguration(this);
-        this.instantitations = new InstantiationConfiguration(this);
+        this.instantiations = new InstantiationConfiguration(this);
     }
 
     public CustomAnnotationsConfiguration annotations() {
@@ -19,7 +19,7 @@ public class MagicConfiguration {
     }
 
     public InstantiationConfiguration instantiations() {
-        return this.instantitations;
+        return this.instantiations;
     }
 
     public MagicConfiguration build() {

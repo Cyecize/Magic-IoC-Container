@@ -7,22 +7,53 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+/**
+ * Simple POJO class that holds information about a given class.
+ * <p>
+ * This is needed since that way we have the data scanned only once and we
+ * will improve performance at runtime since the data in only collected once
+ * at startup.
+ */
 public class ServiceDetails {
 
+    /**
+     * The type of the service.
+     */
     private Class<?> serviceType;
 
+    /**
+     * The annotation used to map the service (@Service or a custom one).
+     */
     private Annotation annotation;
 
+    /**
+     * The constructor that will be used to create an instance of the service.
+     */
     private Constructor<?> targetConstructor;
 
+    /**
+     * Service instance.
+     */
     private Object instance;
 
+    /**
+     * Reference to the post construct method if any.
+     */
     private Method postConstructMethod;
 
+    /**
+     * Reference to the pre destroy method if any.
+     */
     private Method preDestroyMethod;
 
+    /**
+     * The reference to all @Bean (or a custom one) annotated methods.
+     */
     private Method[] beans;
 
+    /**
+     * List of all services that depend on this one.
+     */
     private final List<ServiceDetails> dependantServices;
 
     public ServiceDetails() {
@@ -106,6 +137,12 @@ public class ServiceDetails {
         this.dependantServices.add(serviceDetails);
     }
 
+    /**
+     * We are using the serviceType hashcode in order to make this class unique
+     * when using in in sets.
+     *
+     * @return hashcode.
+     */
     @Override
     public int hashCode() {
         if (this.serviceType == null) {
