@@ -35,8 +35,8 @@ public class MagicInjector {
      *
      * @param startupClass any class from the client side.
      */
-    public static void run(Class<?> startupClass) {
-        run(startupClass, new MagicConfiguration());
+    public static DependencyContainer run(Class<?> startupClass) {
+        return run(startupClass, new MagicConfiguration());
     }
 
 
@@ -46,7 +46,7 @@ public class MagicInjector {
      * @param startupClass  any class from the client side.
      * @param configuration client configuration.
      */
-    public static void run(Class<?> startupClass, MagicConfiguration configuration) {
+    public static DependencyContainer run(Class<?> startupClass, MagicConfiguration configuration) {
         ServicesScanningService scanningService = new ServicesScanningServiceImpl(configuration.annotations());
         ObjectInstantiationService objectInstantiationService = new ObjectInstantiationServiceImpl();
         ServicesInstantiationService instantiationService = new ServicesInstantiationServiceImpl(
@@ -68,6 +68,8 @@ public class MagicInjector {
 
         dependencyContainer.init(serviceDetails, objectInstantiationService);
         runStartUpMethod(startupClass);
+
+        return dependencyContainer;
     }
 
     /**
