@@ -171,7 +171,7 @@ public class DependencyContainerImpl implements DependencyContainer {
     @Override
     public List<ServiceDetails> getServicesByAnnotation(Class<? extends Annotation> annotationType) {
         return this.servicesAndBeans.stream()
-                .filter(sd -> sd.getAnnotation().annotationType() == annotationType)
+                .filter(sd -> sd.getAnnotation() != null && sd.getAnnotation().annotationType() == annotationType)
                 .collect(Collectors.toList());
     }
 

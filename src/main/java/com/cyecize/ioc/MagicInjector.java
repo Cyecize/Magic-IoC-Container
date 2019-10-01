@@ -84,6 +84,10 @@ public class MagicInjector {
      */
     private static void runStartUpMethod(Class<?> startupClass) {
         ServiceDetails serviceDetails = dependencyContainer.getServiceDetails(startupClass);
+		
+		if (serviceDetails == null) {
+			return;
+		}
 
         for (Method declaredMethod : serviceDetails.getServiceType().getDeclaredMethods()) {
             if (declaredMethod.getParameterCount() != 0 ||
