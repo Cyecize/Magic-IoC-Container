@@ -145,7 +145,7 @@ public class DependencyContainerImpl implements DependencyContainer {
         }
 
         final ServiceDetails serviceDetails = this.servicesAndBeans.stream()
-                .filter(sd -> serviceType.isAssignableFrom(sd.getServiceType()))
+                .filter(sd -> serviceType.isAssignableFrom(sd.getProxyInstance().getClass()) || serviceType.isAssignableFrom(sd.getServiceType()))
                 .findFirst().orElse(null);
 
         if (serviceDetails != null) {
