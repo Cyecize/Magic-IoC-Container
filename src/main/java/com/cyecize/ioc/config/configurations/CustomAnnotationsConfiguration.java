@@ -5,6 +5,7 @@ import com.cyecize.ioc.config.MagicConfiguration;
 
 import java.lang.annotation.Annotation;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -25,8 +26,8 @@ public class CustomAnnotationsConfiguration extends BaseSubConfiguration {
         return this;
     }
 
-    public CustomAnnotationsConfiguration addCustomServiceAnnotations(Class<? extends Annotation>... annotations) {
-        this.customServiceAnnotations.addAll(Arrays.asList(annotations));
+    public CustomAnnotationsConfiguration addCustomServiceAnnotations(Collection<Class<? extends Annotation>> annotations) {
+        this.customServiceAnnotations.addAll(Set.copyOf(annotations));
         return this;
     }
 
@@ -35,8 +36,8 @@ public class CustomAnnotationsConfiguration extends BaseSubConfiguration {
         return this;
     }
 
-    public CustomAnnotationsConfiguration addCustomBeanAnnotations(Class<? extends Annotation>... annotations) {
-        this.customBeanAnnotations.addAll(Arrays.asList(annotations));
+    public CustomAnnotationsConfiguration addCustomBeanAnnotations(Collection<Class<? extends Annotation>> annotations) {
+        this.customBeanAnnotations.addAll(Set.copyOf(annotations));
         return this;
     }
 
