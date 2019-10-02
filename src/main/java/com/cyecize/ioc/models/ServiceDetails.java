@@ -14,6 +14,8 @@ import java.util.*;
  */
 public class ServiceDetails {
 
+    private static final String PROXY_ALREADY_CREATED_MSG = "Proxy instance already created.";
+
     /**
      * The type of the service.
      */
@@ -22,7 +24,7 @@ public class ServiceDetails {
     /**
      * The annotations used to map the service (@Service or a custom one).
      */
-    private List<Class<? extends Annotation>> annotations;
+    private final List<Class<? extends Annotation>> annotations;
 
     /**
      * The constructor that will be used to create an instance of the service.
@@ -33,6 +35,11 @@ public class ServiceDetails {
      * Service instance.
      */
     private Object instance;
+
+    /**
+     * Proxy instance that will be injected into services instead of actual instance.
+     */
+    private Object proxyInstance;
 
     /**
      * Reference to the post construct method if any.
@@ -55,8 +62,8 @@ public class ServiceDetails {
     private final List<ServiceDetails> dependantServices;
 
     public ServiceDetails() {
-        this.dependantServices = new ArrayList<>();
         this.annotations = new ArrayList<>();
+        this.dependantServices = new ArrayList<>();
     }
 
     public ServiceDetails(Class<?> serviceType,
@@ -100,12 +107,24 @@ public class ServiceDetails {
         this.targetConstructor = targetConstructor;
     }
 
-    public Object getInstance() {
+    public Object getActualInstance() {
         return this.instance;
     }
 
     public void setInstance(Object instance) {
         this.instance = instance;
+    }
+
+    public Object getProxyInstance() {
+        return this.proxyInstance;
+    }
+
+    public void setProxyInstance(Object proxyInstance) {
+        if (this.proxyInstance != null) {
+            throw new IllegalArgumentException(PROXY_ALREADY_CREATED_MSG);
+        }
+
+        this.proxyInstance = proxyInstance;
     }
 
     public Method getPostConstructMethod() {

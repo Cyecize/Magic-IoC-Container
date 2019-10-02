@@ -99,7 +99,7 @@ public class MagicInjector {
 
             declaredMethod.setAccessible(true);
             try {
-                declaredMethod.invoke(serviceDetails.getInstance());
+                declaredMethod.invoke(serviceDetails.getActualInstance());
             } catch (IllegalAccessException | InvocationTargetException e) {
                 throw new RuntimeException(e);
             }

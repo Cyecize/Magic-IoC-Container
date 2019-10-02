@@ -5,6 +5,7 @@ import com.cyecize.ioc.exceptions.ServiceInstantiationException;
 import com.cyecize.ioc.models.EnqueuedServiceDetails;
 import com.cyecize.ioc.models.ServiceBeanDetails;
 import com.cyecize.ioc.models.ServiceDetails;
+import com.cyecize.ioc.utils.ProxyUtils;
 
 import java.lang.reflect.Method;
 import java.util.*;
@@ -84,6 +85,8 @@ public class ServicesInstantiationServiceImpl implements ServicesInstantiationSe
                 Object[] dependencyInstances = enqueuedServiceDetails.getDependencyInstances();
 
                 this.instantiationService.createInstance(serviceDetails, dependencyInstances);
+                ProxyUtils.createProxyInstance(serviceDetails, enqueuedServiceDetails.getDependencyInstances());
+
                 this.registerInstantiatedService(serviceDetails);
                 this.registerBeans(serviceDetails);
             } else {
@@ -107,6 +110,8 @@ public class ServicesInstantiationServiceImpl implements ServicesInstantiationSe
         for (Method beanMethod : serviceDetails.getBeans()) {
             ServiceBeanDetails beanDetails = new ServiceBeanDetails(beanMethod.getReturnType(), beanMethod, serviceDetails);
             this.instantiationService.createBeanInstance(beanDetails);
+            beanDetails.setProxyInstance(beanDetails.getActualInstance());
+
             this.registerInstantiatedService(beanDetails);
         }
     }
@@ -127,7 +132,7 @@ public class ServicesInstantiationServiceImpl implements ServicesInstantiationSe
 
         for (EnqueuedServiceDetails enqueuedService : this.enqueuedServiceDetails) {
             if (enqueuedService.isDependencyRequired(newlyCreatedService.getServiceType())) {
-                enqueuedService.addDependencyInstance(newlyCreatedService.getInstance());
+                enqueuedService.addDependencyInstance(newlyCreatedService.getProxyInstance());
             }
         }
     }
