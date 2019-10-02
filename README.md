@@ -9,7 +9,8 @@ Main Functionalities
 * Create Beans
 * Add your own custom mapping annotations for services and beans as a configuration
 * Manage instantiated services (get them by annotation or by type)
-* Reload instantiated services (deep reloading is also an option)
+* Reload instantiated services
+* Use of proxy classes to improve consistency when reloading services.
 
 The Goal
 -----------------------
