@@ -37,17 +37,17 @@ public class ServicesScanningServiceImpl implements ServicesScanningService {
      */
     @Override
     public Set<ServiceDetails> mapServices(Set<Class<?>> locatedClasses) {
-        final Map<Class<?>, List<Class<? extends Annotation>>> onlyServiceClasses = this.filterServiceClasses(locatedClasses);
+        final Map<Class<?>, Annotation> onlyServiceClasses = this.filterServiceClasses(locatedClasses);
 
         final Set<ServiceDetails> serviceDetailsStorage = new HashSet<>();
 
-        for (Map.Entry<Class<?>, List<Class<? extends Annotation>>> serviceAnnotationEntry : onlyServiceClasses.entrySet()) {
+        for (Map.Entry<Class<?>, Annotation> serviceAnnotationEntry : onlyServiceClasses.entrySet()) {
             final Class<?> cls = serviceAnnotationEntry.getKey();
-            final List<Class<? extends Annotation>> annotations = serviceAnnotationEntry.getValue();
+            final Annotation annotation = serviceAnnotationEntry.getValue();
 
             final ServiceDetails serviceDetails = new ServiceDetails(
                     cls,
-                    annotations,
+                    annotation,
                     this.findSuitableConstructor(cls),
                     this.findVoidMethodWithZeroParamsAndAnnotations(PostConstruct.class, cls),
                     this.findVoidMethodWithZeroParamsAndAnnotations(PreDestroy.class, cls),
@@ -55,7 +55,6 @@ public class ServicesScanningServiceImpl implements ServicesScanningService {
             );
 
             serviceDetailsStorage.add(serviceDetails);
-
         }
 
         return serviceDetailsStorage.stream()
@@ -69,9 +68,9 @@ public class ServicesScanningServiceImpl implements ServicesScanningService {
      *
      * @return service annotated classes.
      */
-    private Map<Class<?>, List<Class<? extends Annotation>>> filterServiceClasses(Collection<Class<?>> scannedClasses) {
+    private Map<Class<?>, Annotation> filterServiceClasses(Collection<Class<?>> scannedClasses) {
         final Set<Class<? extends Annotation>> serviceAnnotations = this.configuration.getCustomServiceAnnotations();
-        final Map<Class<?>, List<Class<? extends Annotation>>> locatedClasses = new HashMap<>();
+        final Map<Class<?>, Annotation> locatedClasses = new HashMap<>();
 
         for (Class<?> cls : scannedClasses) {
             if (cls.isInterface() || cls.isEnum() || cls.isAnnotation()) {
@@ -80,17 +79,8 @@ public class ServicesScanningServiceImpl implements ServicesScanningService {
 
             for (Annotation annotation : cls.getAnnotations()) {
                 if (serviceAnnotations.contains(annotation.annotationType())) {
-                    locatedClasses.put(cls, Collections.singletonList(annotation.annotationType()));
+                    locatedClasses.put(cls, annotation);
                     break;
-                }
-
-                if (annotation.annotationType().isAnnotationPresent(AliasFor.class)) {
-                    final Class<? extends Annotation> aliasValue = annotation.annotationType().getAnnotation(AliasFor.class).value();
-
-                    if (serviceAnnotations.contains(aliasValue)) {
-                        locatedClasses.put(cls, List.of(aliasValue, annotation.annotationType()));
-                        break;
-                    }
                 }
             }
         }
@@ -173,19 +163,6 @@ public class ServicesScanningServiceImpl implements ServicesScanningService {
                     beanMethods.add(method);
 
                     break;
-                }
-
-                for (Annotation declaredAnnotation : method.getDeclaredAnnotations()) {
-                    if (declaredAnnotation.annotationType().isAnnotationPresent(AliasFor.class)) {
-                        final Class<? extends Annotation> aliasValue = declaredAnnotation.annotationType().getAnnotation(AliasFor.class).value();
-
-                        if (aliasValue == beanAnnotation) {
-                            method.setAccessible(true);
-                            beanMethods.add(method);
-
-                            break;
-                        }
-                    }
                 }
             }
         }
