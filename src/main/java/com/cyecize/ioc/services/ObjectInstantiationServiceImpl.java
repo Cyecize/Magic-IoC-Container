@@ -26,14 +26,14 @@ public class ObjectInstantiationServiceImpl implements ObjectInstantiationServic
      */
     @Override
     public void createInstance(ServiceDetails serviceDetails, Object... constructorParams) throws ServiceInstantiationException {
-        Constructor targetConstructor = serviceDetails.getTargetConstructor();
+        final Constructor targetConstructor = serviceDetails.getTargetConstructor();
 
         if (constructorParams.length != targetConstructor.getParameterCount()) {
             throw new ServiceInstantiationException(String.format(INVALID_PARAMETERS_COUNT_MSG, serviceDetails.getServiceType().getName()));
         }
 
         try {
-            Object instance = targetConstructor.newInstance(constructorParams);
+            final Object instance = targetConstructor.newInstance(constructorParams);
             serviceDetails.setInstance(instance);
             this.invokePostConstruct(serviceDetails);
         } catch (IllegalAccessException | InvocationTargetException | InstantiationException e) {
@@ -67,12 +67,13 @@ public class ObjectInstantiationServiceImpl implements ObjectInstantiationServic
      */
     @Override
     public void createBeanInstance(ServiceBeanDetails serviceBeanDetails) throws BeanInstantiationException {
-        Method originMethod = serviceBeanDetails.getOriginMethod();
-        Object rootInstance = serviceBeanDetails.getRootService().getActualInstance();
+        final Method originMethod = serviceBeanDetails.getOriginMethod();
+        final Object rootInstance = serviceBeanDetails.getRootService().getActualInstance();
 
         try {
-            Object instance = originMethod.invoke(rootInstance);
+            final Object instance = originMethod.invoke(rootInstance);
             serviceBeanDetails.setInstance(instance);
+            serviceBeanDetails.setProxyInstance(instance);
         } catch (IllegalAccessException | InvocationTargetException e) {
             throw new BeanInstantiationException(e.getMessage(), e);
         }
