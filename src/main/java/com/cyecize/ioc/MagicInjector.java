@@ -47,26 +47,26 @@ public class MagicInjector {
      * @param configuration client configuration.
      */
     public static DependencyContainer run(Class<?> startupClass, MagicConfiguration configuration) {
-        ServicesScanningService scanningService = new ServicesScanningServiceImpl(configuration.annotations());
-        ObjectInstantiationService objectInstantiationService = new ObjectInstantiationServiceImpl();
-        ServicesInstantiationService instantiationService = new ServicesInstantiationServiceImpl(
+        final ServicesScanningService scanningService = new ServicesScanningServiceImpl(configuration.annotations());
+        final ObjectInstantiationService objectInstantiationService = new ObjectInstantiationServiceImpl();
+        final ServicesInstantiationService instantiationService = new ServicesInstantiationServiceImpl(
                 configuration.instantiations(),
                 objectInstantiationService
         );
 
-        Directory directory = new DirectoryResolverImpl().resolveDirectory(startupClass);
+        final Directory directory = new DirectoryResolverImpl().resolveDirectory(startupClass);
 
         ClassLocator classLocator = new ClassLocatorForDirectory();
         if (directory.getDirectoryType() == DirectoryType.JAR_FILE) {
             classLocator = new ClassLocatorForJarFile();
         }
 
-        Set<Class<?>> locatedClasses = classLocator.locateClasses(directory.getDirectory());
+        final Set<Class<?>> locatedClasses = classLocator.locateClasses(directory.getDirectory());
 
-        Set<ServiceDetails> mappedServices = scanningService.mapServices(locatedClasses);
-        List<ServiceDetails> serviceDetails = instantiationService.instantiateServicesAndBeans(mappedServices);
+        final Set<ServiceDetails> mappedServices = scanningService.mapServices(locatedClasses);
+        final List<ServiceDetails> serviceDetails = instantiationService.instantiateServicesAndBeans(mappedServices);
 
-        dependencyContainer.init(serviceDetails, objectInstantiationService);
+        dependencyContainer.init(locatedClasses, serviceDetails, objectInstantiationService);
         runStartUpMethod(startupClass);
 
         return dependencyContainer;
@@ -84,10 +84,10 @@ public class MagicInjector {
      */
     private static void runStartUpMethod(Class<?> startupClass) {
         ServiceDetails serviceDetails = dependencyContainer.getServiceDetails(startupClass);
-		
-		if (serviceDetails == null) {
-			return;
-		}
+
+        if (serviceDetails == null) {
+            return;
+        }
 
         for (Method declaredMethod : serviceDetails.getServiceType().getDeclaredMethods()) {
             if (declaredMethod.getParameterCount() != 0 ||

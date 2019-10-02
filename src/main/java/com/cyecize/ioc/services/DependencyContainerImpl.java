@@ -5,6 +5,7 @@ import com.cyecize.ioc.models.ServiceBeanDetails;
 import com.cyecize.ioc.models.ServiceDetails;
 
 import java.lang.annotation.Annotation;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -21,6 +22,8 @@ public class DependencyContainerImpl implements DependencyContainer {
 
     private boolean isInit;
 
+    private Collection<Class<?>> locatedClasses;
+
     private List<ServiceDetails> servicesAndBeans;
 
     private ObjectInstantiationService instantiationService;
@@ -30,11 +33,12 @@ public class DependencyContainerImpl implements DependencyContainer {
     }
 
     @Override
-    public void init(List<ServiceDetails> servicesAndBeans, ObjectInstantiationService instantiationService) throws AlreadyInitializedException {
+    public void init(Collection<Class<?>> locatedClasses, List<ServiceDetails> servicesAndBeans, ObjectInstantiationService instantiationService) throws AlreadyInitializedException {
         if (this.isInit) {
             throw new AlreadyInitializedException(ALREADY_INITIALIZED_MSG);
         }
 
+        this.locatedClasses = locatedClasses;
         this.servicesAndBeans = servicesAndBeans;
         this.instantiationService = instantiationService;
 
@@ -84,8 +88,8 @@ public class DependencyContainerImpl implements DependencyContainer {
      * @return array of instantiated dependencies.
      */
     private Object[] collectDependencies(ServiceDetails serviceDetails) {
-        Class<?>[] parameterTypes = serviceDetails.getTargetConstructor().getParameterTypes();
-        Object[] dependencyInstances = new Object[parameterTypes.length];
+        final Class<?>[] parameterTypes = serviceDetails.getTargetConstructor().getParameterTypes();
+        final Object[] dependencyInstances = new Object[parameterTypes.length];
 
         for (int i = 0; i < parameterTypes.length; i++) {
             dependencyInstances[i] = this.getService(parameterTypes[i]);
@@ -120,7 +124,7 @@ public class DependencyContainerImpl implements DependencyContainer {
     @SuppressWarnings("unchecked")
     @Override
     public <T> T reload(T service, boolean reloadDependantServices) {
-        ServiceDetails serviceDetails = this.getServiceDetails(service.getClass());
+        final ServiceDetails serviceDetails = this.getServiceDetails(service.getClass());
 
         if (serviceDetails == null) {
             return null;
@@ -141,7 +145,7 @@ public class DependencyContainerImpl implements DependencyContainer {
     @SuppressWarnings("unchecked")
     @Override
     public <T> T getService(Class<T> serviceType) {
-        ServiceDetails serviceDetails = this.getServiceDetails(serviceType);
+        final ServiceDetails serviceDetails = this.getServiceDetails(serviceType);
 
         if (serviceDetails != null) {
             return (T) serviceDetails.getInstance();
@@ -171,7 +175,7 @@ public class DependencyContainerImpl implements DependencyContainer {
     @Override
     public List<ServiceDetails> getServicesByAnnotation(Class<? extends Annotation> annotationType) {
         return this.servicesAndBeans.stream()
-                .filter(sd -> sd.getAnnotation() != null && sd.getAnnotation().annotationType() == annotationType)
+                .filter(sd -> sd.getAnnotations().contains(annotationType))
                 .collect(Collectors.toList());
     }
 
@@ -191,5 +195,10 @@ public class DependencyContainerImpl implements DependencyContainer {
     @Override
     public List<ServiceDetails> getAllServiceDetails() {
         return Collections.unmodifiableList(this.servicesAndBeans);
+    }
+
+    @Override
+    public Collection<Class<?>> getLocatedClasses() {
+        return Collections.unmodifiableCollection(this.locatedClasses);
     }
 }
