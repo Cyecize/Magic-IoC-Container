@@ -85,11 +85,14 @@ public class DependencyContainerImpl implements DependencyContainer {
      */
     private void handleReload(ServiceDetails serviceDetails) {
         if (serviceDetails instanceof ServiceBeanDetails) {
-            this.instantiationService.createBeanInstance((ServiceBeanDetails) serviceDetails);
+            ServiceBeanDetails serviceBeanDetails = (ServiceBeanDetails) serviceDetails;
+            this.instantiationService.createBeanInstance(serviceBeanDetails);
 
-            //Since beans are not proxies, reload all dependant classes.
-            for (ServiceDetails dependantService : serviceDetails.getDependantServices()) {
-                this.reload(dependantService);
+            if (!serviceBeanDetails.hasProxyInstance()) {
+                //Since bean has no proxy, reload all dependant classes.
+                for (ServiceDetails dependantService : serviceDetails.getDependantServices()) {
+                    this.reload(dependantService);
+                }
             }
         } else {
             this.instantiationService.createInstance(serviceDetails, this.collectDependencies(serviceDetails));
