@@ -9,35 +9,43 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 
-public class CustomAnnotationsConfiguration extends BaseSubConfiguration {
+public class ScanningConfiguration extends BaseSubConfiguration {
 
     private final Set<Class<? extends Annotation>> customServiceAnnotations;
 
     private final Set<Class<? extends Annotation>> customBeanAnnotations;
 
-    public CustomAnnotationsConfiguration(MagicConfiguration parentConfig) {
+    private final Set<Class<?>> additionalClasses;
+
+    public ScanningConfiguration(MagicConfiguration parentConfig) {
         super(parentConfig);
         this.customServiceAnnotations = new HashSet<>();
         this.customBeanAnnotations = new HashSet<>();
+        this.additionalClasses = new HashSet<>();
     }
 
-    public CustomAnnotationsConfiguration addCustomServiceAnnotation(Class<? extends Annotation> annotation) {
+    public ScanningConfiguration addCustomServiceAnnotation(Class<? extends Annotation> annotation) {
         this.customServiceAnnotations.add(annotation);
         return this;
     }
 
-    public CustomAnnotationsConfiguration addCustomServiceAnnotations(Collection<Class<? extends Annotation>> annotations) {
+    public ScanningConfiguration addCustomServiceAnnotations(Collection<Class<? extends Annotation>> annotations) {
         this.customServiceAnnotations.addAll(Set.copyOf(annotations));
         return this;
     }
 
-    public CustomAnnotationsConfiguration addCustomBeanAnnotation(Class<? extends Annotation> annotation) {
+    public ScanningConfiguration addCustomBeanAnnotation(Class<? extends Annotation> annotation) {
         this.customBeanAnnotations.add(annotation);
         return this;
     }
 
-    public CustomAnnotationsConfiguration addCustomBeanAnnotations(Collection<Class<? extends Annotation>> annotations) {
+    public ScanningConfiguration addCustomBeanAnnotations(Collection<Class<? extends Annotation>> annotations) {
         this.customBeanAnnotations.addAll(Set.copyOf(annotations));
+        return this;
+    }
+
+    public ScanningConfiguration addAdditionalClassesForScanning(Class<?>... classes) {
+        this.additionalClasses.addAll(Arrays.asList(classes));
         return this;
     }
 
@@ -47,5 +55,9 @@ public class CustomAnnotationsConfiguration extends BaseSubConfiguration {
 
     public Set<Class<? extends Annotation>> getCustomServiceAnnotations() {
         return this.customServiceAnnotations;
+    }
+
+    public Set<Class<?>> getAdditionalClasses() {
+        return this.additionalClasses;
     }
 }

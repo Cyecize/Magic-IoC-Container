@@ -2,7 +2,7 @@ package com.cyecize.ioc.services;
 
 import com.cyecize.ioc.annotations.*;
 import com.cyecize.ioc.models.ServiceDetails;
-import com.cyecize.ioc.config.configurations.CustomAnnotationsConfiguration;
+import com.cyecize.ioc.config.configurations.ScanningConfiguration;
 import com.cyecize.ioc.utils.ServiceDetailsConstructComparator;
 
 import java.lang.annotation.Annotation;
@@ -21,9 +21,9 @@ public class ServicesScanningServiceImpl implements ServicesScanningService {
     /**
      * Configuration containing annotations provided by the client.
      */
-    private final CustomAnnotationsConfiguration configuration;
+    private final ScanningConfiguration configuration;
 
-    public ServicesScanningServiceImpl(CustomAnnotationsConfiguration configuration) {
+    public ServicesScanningServiceImpl(ScanningConfiguration configuration) {
         this.configuration = configuration;
         this.init();
     }
