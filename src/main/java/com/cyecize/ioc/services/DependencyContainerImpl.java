@@ -113,6 +113,17 @@ public class DependencyContainerImpl implements DependencyContainer {
         return dependencyInstances;
     }
 
+    @Override
+    public void update(Object service) {
+        final ServiceDetails serviceDetails = this.getServiceDetails(service.getClass());
+        if (serviceDetails == null) {
+            throw new IllegalArgumentException(String.format(SERVICE_NOT_FOUND_FORMAT, service));
+        }
+
+        this.instantiationService.destroyInstance(serviceDetails);
+        serviceDetails.setInstance(service);
+    }
+
     /**
      * Gets service instance for a given type.
      *

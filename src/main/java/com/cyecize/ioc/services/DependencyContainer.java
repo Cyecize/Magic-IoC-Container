@@ -14,6 +14,8 @@ public interface DependencyContainer {
 
     void reload(Class<?> serviceType);
 
+    void update(Object service);
+
     <T> T getService(Class<T> serviceType);
 
     ServiceDetails getServiceDetails(Class<?> serviceType);
