@@ -3,6 +3,7 @@ package com.cyecize.ioc.services;
 import com.cyecize.ioc.annotations.*;
 import com.cyecize.ioc.models.ServiceDetails;
 import com.cyecize.ioc.config.configurations.ScanningConfiguration;
+import com.cyecize.ioc.utils.AliasFinder;
 import com.cyecize.ioc.utils.ServiceDetailsConstructComparator;
 
 import java.lang.annotation.Annotation;
@@ -112,12 +113,10 @@ public class ServicesScanningServiceImpl implements ServicesScanningService {
             }
 
             for (Annotation declaredAnnotation : ctr.getDeclaredAnnotations()) {
-                if (declaredAnnotation.annotationType().isAnnotationPresent(AliasFor.class)) {
-                    final Class<? extends Annotation> aliasValue = declaredAnnotation.annotationType().getAnnotation(AliasFor.class).value();
-                    if (aliasValue == Autowired.class) {
-                        ctr.setAccessible(true);
-                        return ctr;
-                    }
+                final Class<? extends Annotation> aliasAnnotation = AliasFinder.getAliasAnnotation(declaredAnnotation, Autowired.class);
+                if (aliasAnnotation != null) {
+                    ctr.setAccessible(true);
+                    return ctr;
                 }
             }
         }
@@ -138,12 +137,11 @@ public class ServicesScanningServiceImpl implements ServicesScanningService {
             }
 
             for (Annotation declaredAnnotation : method.getDeclaredAnnotations()) {
-                if (declaredAnnotation.annotationType().isAnnotationPresent(AliasFor.class)) {
-                    final Class<? extends Annotation> aliasValue = declaredAnnotation.annotationType().getAnnotation(AliasFor.class).value();
-                    if (aliasValue == annotation) {
-                        method.setAccessible(true);
-                        return method;
-                    }
+                final Class<? extends Annotation> aliasAnnotation = AliasFinder.getAliasAnnotation(declaredAnnotation, annotation);
+                
+                if (aliasAnnotation != null) {
+                    method.setAccessible(true);
+                    return method;
                 }
             }
         }

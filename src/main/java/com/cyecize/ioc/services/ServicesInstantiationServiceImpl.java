@@ -1,13 +1,17 @@
 package com.cyecize.ioc.services;
 
+import com.cyecize.ioc.annotations.Nullable;
 import com.cyecize.ioc.config.configurations.InstantiationConfiguration;
 import com.cyecize.ioc.exceptions.ServiceInstantiationException;
 import com.cyecize.ioc.models.EnqueuedServiceDetails;
 import com.cyecize.ioc.models.ServiceBeanDetails;
 import com.cyecize.ioc.models.ServiceDetails;
+import com.cyecize.ioc.utils.AliasFinder;
 import com.cyecize.ioc.utils.ProxyUtils;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
+import java.lang.reflect.Parameter;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -69,7 +73,6 @@ public class ServicesInstantiationServiceImpl implements ServicesInstantiationSe
     @Override
     public List<ServiceDetails> instantiateServicesAndBeans(Set<ServiceDetails> mappedServices) throws ServiceInstantiationException {
         this.init(mappedServices);
-        this.checkForMissingServices(mappedServices);
 
         int counter = 0;
         int maxNumberOfIterations = this.configuration.getMaximumAllowedIterations();
@@ -78,7 +81,7 @@ public class ServicesInstantiationServiceImpl implements ServicesInstantiationSe
                 throw new ServiceInstantiationException(String.format(MAX_NUMBER_OF_ALLOWED_ITERATIONS_REACHED, maxNumberOfIterations));
             }
 
-            EnqueuedServiceDetails enqueuedServiceDetails = this.enqueuedServiceDetails.removeFirst();
+            final EnqueuedServiceDetails enqueuedServiceDetails = this.enqueuedServiceDetails.removeFirst();
 
             if (enqueuedServiceDetails.isResolved()) {
                 ServiceDetails serviceDetails = enqueuedServiceDetails.getServiceDetails();
@@ -155,44 +158,6 @@ public class ServicesInstantiationServiceImpl implements ServicesInstantiationSe
     }
 
     /**
-     * Checks if the client has a service that will never be instantiated because
-     * it has a dependency that is not present in the application context.
-     *
-     * @param mappedServices set of all mapped services.
-     * @throws ServiceInstantiationException if a service has a dependency that is not
-     *                                       present in the application context.
-     */
-    private void checkForMissingServices(Set<ServiceDetails> mappedServices) throws ServiceInstantiationException {
-        for (ServiceDetails serviceDetails : mappedServices) {
-            for (Class<?> parameterType : serviceDetails.getTargetConstructor().getParameterTypes()) {
-                if (!this.isAssignableTypePresent(parameterType)) {
-                    throw new ServiceInstantiationException(
-                            String.format(COULD_NOT_FIND_CONSTRUCTOR_PARAM_MSG,
-                                    serviceDetails.getServiceType().getName(),
-                                    parameterType.getName()
-                            )
-                    );
-                }
-            }
-        }
-    }
-
-    /**
-     * @param cls given type.
-     * @return true if allAvailableClasses contains a type
-     * that is compatible with the given type.
-     */
-    private boolean isAssignableTypePresent(Class<?> cls) {
-        for (Class<?> serviceType : this.allAvailableClasses) {
-            if (cls.isAssignableFrom(serviceType)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    /**
      * Adds each service to the enqueuedServiceDetails.
      * Adds each service type to allAvailableClasses.
      * Adds all beans that can be loaded from each service
@@ -213,5 +178,64 @@ public class ServicesInstantiationServiceImpl implements ServicesInstantiationSe
                     .collect(Collectors.toList())
             );
         }
+
+        this.setDependencyRequirements();
+    }
+
+    /**
+     * Checks if the client has a service that will never be instantiated because
+     * it has a dependency that is not present in the application context.
+     * <p>
+     * If {@link Nullable} annotation is present, the missing dependency is considered valid.
+     */
+    private void setDependencyRequirements() {
+        for (EnqueuedServiceDetails enqueuedService : this.enqueuedServiceDetails) {
+            for (Parameter parameter : enqueuedService.getServiceDetails().getTargetConstructor().getParameters()) {
+                final Class<?> dependency = parameter.getType();
+
+                if (this.isAssignableTypePresent(dependency)) {
+                    continue;
+                }
+
+                boolean hasAnnotation = false;
+                if (parameter.isAnnotationPresent(Nullable.class)) {
+                    enqueuedService.setDependencyNotNull(dependency, false);
+                    hasAnnotation = true;
+                } else {
+                    for (Annotation declaredAnnotation : parameter.getDeclaredAnnotations()) {
+                        final Class<? extends Annotation> aliasAnnotation = AliasFinder.getAliasAnnotation(declaredAnnotation, Nullable.class);
+                        if (aliasAnnotation != null) {
+                            enqueuedService.setDependencyNotNull(dependency, false);
+                            hasAnnotation = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (!hasAnnotation) {
+                    throw new ServiceInstantiationException(
+                            String.format(COULD_NOT_FIND_CONSTRUCTOR_PARAM_MSG,
+                                    enqueuedService.getServiceDetails().getServiceType().getName(),
+                                    dependency.getName()
+                            )
+                    );
+                }
+            }
+        }
+    }
+
+    /**
+     * @param cls given type.
+     * @return true if allAvailableClasses contains a type
+     * that is compatible with the given type.
+     */
+    private boolean isAssignableTypePresent(Class<?> cls) {
+        for (Class<?> serviceType : this.allAvailableClasses) {
+            if (cls.isAssignableFrom(serviceType)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
