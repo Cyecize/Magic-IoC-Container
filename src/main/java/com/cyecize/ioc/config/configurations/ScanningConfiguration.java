@@ -4,10 +4,7 @@ import com.cyecize.ioc.config.BaseSubConfiguration;
 import com.cyecize.ioc.config.MagicConfiguration;
 
 import java.lang.annotation.Annotation;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 
 public class ScanningConfiguration extends BaseSubConfiguration {
 
@@ -15,13 +12,13 @@ public class ScanningConfiguration extends BaseSubConfiguration {
 
     private final Set<Class<? extends Annotation>> customBeanAnnotations;
 
-    private final Set<Class<?>> additionalClasses;
+    private final Map<Class<?>, Class<? extends Annotation>> additionalClasses;
 
     public ScanningConfiguration(MagicConfiguration parentConfig) {
         super(parentConfig);
         this.customServiceAnnotations = new HashSet<>();
         this.customBeanAnnotations = new HashSet<>();
-        this.additionalClasses = new HashSet<>();
+        this.additionalClasses = new HashMap<>();
     }
 
     public ScanningConfiguration addCustomServiceAnnotation(Class<? extends Annotation> annotation) {
@@ -44,8 +41,8 @@ public class ScanningConfiguration extends BaseSubConfiguration {
         return this;
     }
 
-    public ScanningConfiguration addAdditionalClassesForScanning(Class<?>... classes) {
-        this.additionalClasses.addAll(Arrays.asList(classes));
+    public ScanningConfiguration addAdditionalClassesForScanning(Map<Class<?>, Class<? extends Annotation>> additionalClasses) {
+        this.additionalClasses.putAll(additionalClasses);
         return this;
     }
 
@@ -57,7 +54,7 @@ public class ScanningConfiguration extends BaseSubConfiguration {
         return this.customServiceAnnotations;
     }
 
-    public Set<Class<?>> getAdditionalClasses() {
+    public Map<Class<?>, Class<? extends Annotation>> getAdditionalClasses() {
         return this.additionalClasses;
     }
 }
