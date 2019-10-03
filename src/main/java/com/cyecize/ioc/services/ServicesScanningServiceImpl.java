@@ -23,11 +23,8 @@ public class ServicesScanningServiceImpl implements ServicesScanningService {
      */
     private final ScanningConfiguration configuration;
 
-    private final Map<Class<?>, Annotation> locatedClasses;
-
     public ServicesScanningServiceImpl(ScanningConfiguration configuration) {
         this.configuration = configuration;
-        this.locatedClasses = new HashMap<>();
         this.init();
     }
 
@@ -73,6 +70,7 @@ public class ServicesScanningServiceImpl implements ServicesScanningService {
      */
     private Map<Class<?>, Annotation> filterServiceClasses(Collection<Class<?>> scannedClasses) {
         final Set<Class<? extends Annotation>> serviceAnnotations = this.configuration.getCustomServiceAnnotations();
+        final Map<Class<?>, Annotation> locatedClasses = new HashMap<>();
 
         for (Class<?> cls : scannedClasses) {
             if (cls.isInterface() || cls.isEnum() || cls.isAnnotation()) {
@@ -81,13 +79,22 @@ public class ServicesScanningServiceImpl implements ServicesScanningService {
 
             for (Annotation annotation : cls.getAnnotations()) {
                 if (serviceAnnotations.contains(annotation.annotationType())) {
-                    this.locatedClasses.put(cls, annotation);
+                    locatedClasses.put(cls, annotation);
                     break;
                 }
             }
         }
 
-        return this.locatedClasses;
+        this.configuration.getAdditionalClasses().forEach((cls, a) -> {
+            Annotation annotation = null;
+            if (a != null && cls.isAnnotationPresent(a)) {
+                annotation = cls.getAnnotation(a);
+            }
+
+            locatedClasses.put(cls, annotation);
+        });
+
+        return locatedClasses;
     }
 
     /**
@@ -179,9 +186,5 @@ public class ServicesScanningServiceImpl implements ServicesScanningService {
     private void init() {
         this.configuration.getCustomBeanAnnotations().add(Bean.class);
         this.configuration.getCustomServiceAnnotations().add(Service.class);
-
-        this.configuration.getAdditionalClasses().forEach((cls, a) -> {
-            this.locatedClasses.put(cls, cls.getAnnotation(a));
-        });
     }
 }

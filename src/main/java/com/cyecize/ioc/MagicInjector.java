@@ -47,7 +47,7 @@ public class MagicInjector {
      * @param configuration client configuration.
      */
     public static DependencyContainer run(Class<?> startupClass, MagicConfiguration configuration) {
-        final ServicesScanningService scanningService = new ServicesScanningServiceImpl(configuration.annotations());
+        final ServicesScanningService scanningService = new ServicesScanningServiceImpl(configuration.scanning());
         final ObjectInstantiationService objectInstantiationService = new ObjectInstantiationServiceImpl();
         final ServicesInstantiationService instantiationService = new ServicesInstantiationServiceImpl(
                 configuration.instantiations(),

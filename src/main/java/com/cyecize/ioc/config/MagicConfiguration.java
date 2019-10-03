@@ -14,7 +14,7 @@ public class MagicConfiguration {
         this.instantiations = new InstantiationConfiguration(this);
     }
 
-    public ScanningConfiguration annotations() {
+    public ScanningConfiguration scanning() {
         return this.annotations;
     }
 
