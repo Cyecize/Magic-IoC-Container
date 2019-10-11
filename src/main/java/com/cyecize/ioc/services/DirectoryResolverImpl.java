@@ -4,6 +4,7 @@ import com.cyecize.ioc.enums.DirectoryType;
 import com.cyecize.ioc.models.Directory;
 
 import java.io.File;
+import java.io.IOException;
 
 /**
  * DirectoryResolver implementation.
@@ -19,6 +20,15 @@ public class DirectoryResolverImpl implements DirectoryResolver {
         final String directory = this.getDirectory(startupClass);
 
         return new Directory(directory, this.getDirectoryType(directory));
+    }
+
+    @Override
+    public Directory resolveDirectory(File directory) {
+        try {
+            return new Directory(directory.getCanonicalPath(), this.getDirectoryType(directory.getCanonicalPath()));
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     /**

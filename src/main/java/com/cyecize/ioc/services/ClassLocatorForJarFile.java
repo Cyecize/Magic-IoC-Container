@@ -48,7 +48,7 @@ public class ClassLocatorForJarFile implements ClassLocator {
                         .replaceAll("\\\\", ".")
                         .replaceAll("/", ".");
 
-                locatedClasses.add(Class.forName(className));
+                locatedClasses.add(Class.forName(className, true, Thread.currentThread().getContextClassLoader()));
             }
 
         } catch (IOException | ClassNotFoundException e) {

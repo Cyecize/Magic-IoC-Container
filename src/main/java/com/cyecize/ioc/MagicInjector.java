@@ -7,8 +7,10 @@ import com.cyecize.ioc.config.MagicConfiguration;
 import com.cyecize.ioc.enums.DirectoryType;
 import com.cyecize.ioc.models.Directory;
 
+import java.io.File;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -16,19 +18,8 @@ import java.util.Set;
  * Application starting point.
  * <p>
  * Contains multiple starting point methods.
- * Holds an instance of Dependency Container.
  */
 public class MagicInjector {
-
-    /**
-     * Stores all loaded classes.
-     * There is only one instance of a dependency container.
-     */
-    public static final DependencyContainer dependencyContainer;
-
-    static {
-        dependencyContainer = new DependencyContainerImpl();
-    }
 
     /**
      * Overload with default configuration.
@@ -39,7 +30,6 @@ public class MagicInjector {
         return run(startupClass, new MagicConfiguration());
     }
 
-
     /**
      * Runs with startup class.
      *
@@ -47,6 +37,16 @@ public class MagicInjector {
      * @param configuration client configuration.
      */
     public static DependencyContainer run(Class<?> startupClass, MagicConfiguration configuration) {
+        final DependencyContainer dependencyContainer = run(new File[]{
+                new File(new DirectoryResolverImpl().resolveDirectory(startupClass).getDirectory()),
+        }, configuration);
+
+        runStartUpMethod(startupClass, dependencyContainer);
+
+        return dependencyContainer;
+    }
+
+    public static DependencyContainer run(File[] startupDirectories, MagicConfiguration configuration) {
         final ServicesScanningService scanningService = new ServicesScanningServiceImpl(configuration.scanning());
         final ObjectInstantiationService objectInstantiationService = new ObjectInstantiationServiceImpl();
         final ServicesInstantiationService instantiationService = new ServicesInstantiationServiceImpl(
@@ -54,22 +54,33 @@ public class MagicInjector {
                 objectInstantiationService
         );
 
-        final Directory directory = new DirectoryResolverImpl().resolveDirectory(startupClass);
-
-        ClassLocator classLocator = new ClassLocatorForDirectory();
-        if (directory.getDirectoryType() == DirectoryType.JAR_FILE) {
-            classLocator = new ClassLocatorForJarFile();
-        }
-
-        final Set<Class<?>> locatedClasses = classLocator.locateClasses(directory.getDirectory());
+        final Set<Class<?>> locatedClasses = locateClasses(startupDirectories);
 
         final Set<ServiceDetails> mappedServices = scanningService.mapServices(locatedClasses);
         final List<ServiceDetails> serviceDetails = instantiationService.instantiateServicesAndBeans(mappedServices);
 
+        final DependencyContainer dependencyContainer = new DependencyContainerImpl();
         dependencyContainer.init(locatedClasses, serviceDetails, objectInstantiationService);
-        runStartUpMethod(startupClass);
 
         return dependencyContainer;
+    }
+
+    private static Set<Class<?>> locateClasses(File[] startupDirectories) {
+        final Set<Class<?>> locatedClasses = new HashSet<>();
+        final DirectoryResolver directoryResolver = new DirectoryResolverImpl();
+
+        for (File startupDirectory : startupDirectories) {
+            final Directory directory = directoryResolver.resolveDirectory(startupDirectory);
+
+            ClassLocator classLocator = new ClassLocatorForDirectory(Thread.currentThread().getContextClassLoader());
+            if (directory.getDirectoryType() == DirectoryType.JAR_FILE) {
+                classLocator = new ClassLocatorForJarFile();
+            }
+
+            locatedClasses.addAll(classLocator.locateClasses(directory.getDirectory()));
+        }
+
+        return locatedClasses;
     }
 
     /**
@@ -82,8 +93,8 @@ public class MagicInjector {
      *
      * @param startupClass any class from the client side.
      */
-    private static void runStartUpMethod(Class<?> startupClass) {
-        ServiceDetails serviceDetails = dependencyContainer.getServiceDetails(startupClass);
+    private static void runStartUpMethod(Class<?> startupClass, DependencyContainer dependencyContainer) {
+        final ServiceDetails serviceDetails = dependencyContainer.getServiceDetails(startupClass);
 
         if (serviceDetails == null) {
             return;

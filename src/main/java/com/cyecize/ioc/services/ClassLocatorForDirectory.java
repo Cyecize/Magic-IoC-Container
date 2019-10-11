@@ -9,7 +9,7 @@ import java.util.Set;
 
 /**
  * ClassLocator implementation for directories.
- *
+ * <p>
  * User recursion to scan all files in the source root directory and filters
  * those that are classes (end with ".class")
  */
@@ -18,8 +18,11 @@ public class ClassLocatorForDirectory implements ClassLocator {
 
     private final Set<Class<?>> locatedClasses;
 
-    public ClassLocatorForDirectory() {
+    private final ClassLoader classLoader;
+
+    public ClassLocatorForDirectory(ClassLoader classLoader) {
         this.locatedClasses = new HashSet<>();
+        this.classLoader = classLoader;
     }
 
     /**
@@ -48,12 +51,12 @@ public class ClassLocatorForDirectory implements ClassLocator {
 
     /**
      * Recursive method for listing all files in a directory.
-     *
+     * <p>
      * Starts with empty package name - ""
      * If the file is directory, for each sub file calls this method again
      * with the package name having the current file's name and a dot "." appended
      * in order to build a proper package name.
-     *
+     * <p>
      * If the file is file and its name ends with ".class" it is loaded using the
      * built package name and it is added to a set of located classes.
      *
@@ -74,7 +77,7 @@ public class ClassLocatorForDirectory implements ClassLocator {
 
             final String className = packageName + file.getName().replace(Constants.JAVA_BINARY_EXTENSION, "");
 
-            this.locatedClasses.add(Class.forName(className));
+            this.locatedClasses.add(Class.forName(className, true, this.classLoader));
         }
     }
 }

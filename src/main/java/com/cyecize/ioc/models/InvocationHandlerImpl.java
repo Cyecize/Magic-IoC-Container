@@ -1,6 +1,7 @@
 package com.cyecize.ioc.models;
 
 import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
 public class InvocationHandlerImpl implements InvocationHandler {
@@ -13,6 +14,10 @@ public class InvocationHandlerImpl implements InvocationHandler {
 
     @Override
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-        return method.invoke(this.serviceDetails.getActualInstance(), args);
+        try {
+            return method.invoke(this.serviceDetails.getActualInstance(), args);
+        } catch (InvocationTargetException ex) {
+            throw ex.getTargetException();
+        }
     }
 }

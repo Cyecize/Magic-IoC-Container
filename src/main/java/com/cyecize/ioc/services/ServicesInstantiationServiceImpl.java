@@ -22,7 +22,7 @@ import java.util.stream.Collectors;
  */
 public class ServicesInstantiationServiceImpl implements ServicesInstantiationService {
 
-    private static final String MAX_NUMBER_OF_ALLOWED_ITERATIONS_REACHED = "Maximum number of allowed iterations was reached '%s'.";
+    private static final String MAX_NUMBER_OF_ALLOWED_ITERATIONS_REACHED = "Maximum number of allowed iterations was reached '%s'. Remaining services: \n %s";
 
     private static final String COULD_NOT_FIND_CONSTRUCTOR_PARAM_MSG = "Could not create instance of '%s'. Parameter '%s' implementation was not found";
 
@@ -78,7 +78,7 @@ public class ServicesInstantiationServiceImpl implements ServicesInstantiationSe
         int maxNumberOfIterations = this.configuration.getMaximumAllowedIterations();
         while (!this.enqueuedServiceDetails.isEmpty()) {
             if (counter > maxNumberOfIterations) {
-                throw new ServiceInstantiationException(String.format(MAX_NUMBER_OF_ALLOWED_ITERATIONS_REACHED, maxNumberOfIterations));
+                throw new ServiceInstantiationException(String.format(MAX_NUMBER_OF_ALLOWED_ITERATIONS_REACHED, maxNumberOfIterations, this.enqueuedServiceDetails));
             }
 
             final EnqueuedServiceDetails enqueuedServiceDetails = this.enqueuedServiceDetails.removeFirst();
@@ -178,6 +178,17 @@ public class ServicesInstantiationServiceImpl implements ServicesInstantiationSe
                     .map(Method::getReturnType)
                     .collect(Collectors.toList())
             );
+        }
+
+        //If services are provided through config, add them to the list of available classes and instances.
+        this.allAvailableClasses.addAll(this.configuration.getProvidedServices()
+                .stream()
+                .map(ServiceDetails::getServiceType)
+                .collect(Collectors.toList())
+        );
+
+        for (ServiceDetails instantiatedService : this.configuration.getProvidedServices()) {
+            this.registerInstantiatedService(instantiatedService);
         }
 
         this.setDependencyRequirements();
