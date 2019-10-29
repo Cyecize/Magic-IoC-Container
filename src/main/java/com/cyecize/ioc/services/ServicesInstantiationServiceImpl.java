@@ -10,6 +10,7 @@ import com.cyecize.ioc.utils.AliasFinder;
 import com.cyecize.ioc.utils.ProxyUtils;
 
 import java.lang.annotation.Annotation;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.util.*;
@@ -25,6 +26,8 @@ public class ServicesInstantiationServiceImpl implements ServicesInstantiationSe
     private static final String MAX_NUMBER_OF_ALLOWED_ITERATIONS_REACHED = "Maximum number of allowed iterations was reached '%s'. Remaining services: \n %s";
 
     private static final String COULD_NOT_FIND_CONSTRUCTOR_PARAM_MSG = "Could not create instance of '%s'. Parameter '%s' implementation was not found";
+
+    private static final String COULD_NOT_FIND_FIELD_PARAM_MSG = "Could not create instance of '%s'. Implementation was not found for Autowired field '%s'.";
 
     /**
      * Configuration containing the maximum number or allowed iterations.
@@ -87,7 +90,7 @@ public class ServicesInstantiationServiceImpl implements ServicesInstantiationSe
                 ServiceDetails serviceDetails = enqueuedServiceDetails.getServiceDetails();
                 Object[] dependencyInstances = enqueuedServiceDetails.getDependencyInstances();
 
-                this.instantiationService.createInstance(serviceDetails, dependencyInstances);
+                this.instantiationService.createInstance(serviceDetails, dependencyInstances, enqueuedServiceDetails.getFieldDependencyInstances());
                 ProxyUtils.createProxyInstance(serviceDetails, enqueuedServiceDetails.getDependencyInstances());
 
                 this.registerInstantiatedService(serviceDetails);
@@ -209,26 +212,23 @@ public class ServicesInstantiationServiceImpl implements ServicesInstantiationSe
                     continue;
                 }
 
-                boolean hasAnnotation = false;
-                if (parameter.isAnnotationPresent(Nullable.class)) {
+                if (AliasFinder.isAnnotationPresent(parameter.getDeclaredAnnotations(), Nullable.class)) {
                     enqueuedService.setDependencyNotNull(dependency, false);
-                    hasAnnotation = true;
-                } else {
-                    for (Annotation declaredAnnotation : parameter.getDeclaredAnnotations()) {
-                        final Class<? extends Annotation> aliasAnnotation = AliasFinder.getAliasAnnotation(declaredAnnotation, Nullable.class);
-                        if (aliasAnnotation != null) {
-                            enqueuedService.setDependencyNotNull(dependency, false);
-                            hasAnnotation = true;
-                            break;
-                        }
-                    }
-                }
+                } else throw new ServiceInstantiationException(
+                        String.format(COULD_NOT_FIND_CONSTRUCTOR_PARAM_MSG,
+                                enqueuedService.getServiceDetails().getServiceType().getName(),
+                                dependency.getName()
+                        )
+                );
+            }
 
-                if (!hasAnnotation) {
+            //Check for @Autowired annotated fields.
+            for (Field autowireAnnotatedField : enqueuedService.getServiceDetails().getAutowireAnnotatedFields()) {
+                if (!this.isAssignableTypePresent(autowireAnnotatedField.getType())) {
                     throw new ServiceInstantiationException(
-                            String.format(COULD_NOT_FIND_CONSTRUCTOR_PARAM_MSG,
+                            String.format(COULD_NOT_FIND_FIELD_PARAM_MSG,
                                     enqueuedService.getServiceDetails().getServiceType().getName(),
-                                    dependency.getName()
+                                    autowireAnnotatedField.getType().getName()
                             )
                     );
                 }

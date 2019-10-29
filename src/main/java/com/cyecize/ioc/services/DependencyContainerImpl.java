@@ -1,10 +1,12 @@
 package com.cyecize.ioc.services;
 
+import com.cyecize.ioc.annotations.Autowired;
 import com.cyecize.ioc.exceptions.AlreadyInitializedException;
 import com.cyecize.ioc.models.ServiceBeanDetails;
 import com.cyecize.ioc.models.ServiceDetails;
 
 import java.lang.annotation.Annotation;
+import java.lang.reflect.Field;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -95,7 +97,11 @@ public class DependencyContainerImpl implements DependencyContainer {
                 }
             }
         } else {
-            this.instantiationService.createInstance(serviceDetails, this.collectDependencies(serviceDetails));
+            this.instantiationService.createInstance(
+                    serviceDetails,
+                    this.collectDependencies(serviceDetails),
+                    this.collectAutowiredFieldsDependencies(serviceDetails)
+            );
         }
     }
 
@@ -114,6 +120,23 @@ public class DependencyContainerImpl implements DependencyContainer {
         }
 
         return dependencyInstances;
+    }
+
+    /**
+     * Gets instances of all {@link Autowired} annotated dependencies for a given service.
+     *
+     * @param serviceDetails - the given service.
+     * @return array of instantiated dependencies.
+     */
+    private Object[] collectAutowiredFieldsDependencies(ServiceDetails serviceDetails) {
+        final Field[] autowireAnnotatedFields = serviceDetails.getAutowireAnnotatedFields();
+        final Object[] instances = new Object[autowireAnnotatedFields.length];
+
+        for (int i = 0; i < autowireAnnotatedFields.length; i++) {
+            instances[i] = this.getService(autowireAnnotatedFields[i].getType());
+        }
+
+        return instances;
     }
 
     /**

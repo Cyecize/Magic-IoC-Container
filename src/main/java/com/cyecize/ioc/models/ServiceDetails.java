@@ -2,6 +2,7 @@ package com.cyecize.ioc.models;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.*;
 
@@ -56,6 +57,8 @@ public class ServiceDetails {
      */
     private Method[] beans;
 
+    private Field[] autowireAnnotatedFields;
+
     /**
      * List of all services that depend on this one.
      */
@@ -68,7 +71,8 @@ public class ServiceDetails {
     public ServiceDetails(Class<?> serviceType,
                           Annotation annotation, Constructor<?> targetConstructor,
                           Method postConstructMethod, Method preDestroyMethod,
-                          Method[] beans) {
+                          Method[] beans,
+                          Field[] autowireAnnotatedFields) {
         this();
         this.setServiceType(serviceType);
         this.setAnnotation(annotation);
@@ -76,6 +80,7 @@ public class ServiceDetails {
         this.setPostConstructMethod(postConstructMethod);
         this.setPreDestroyMethod(preDestroyMethod);
         this.setBeans(beans);
+        this.setAutowireAnnotatedFields(autowireAnnotatedFields);
     }
 
     public Class<?> getServiceType() {
@@ -144,6 +149,14 @@ public class ServiceDetails {
 
     public void setBeans(Method[] beans) {
         this.beans = beans;
+    }
+
+    public Field[] getAutowireAnnotatedFields() {
+        return this.autowireAnnotatedFields;
+    }
+
+    public void setAutowireAnnotatedFields(Field[] autowireAnnotatedFields) {
+        this.autowireAnnotatedFields = autowireAnnotatedFields;
     }
 
     public List<ServiceDetails> getDependantServices() {

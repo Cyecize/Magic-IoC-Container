@@ -1,5 +1,6 @@
 package com.cyecize.ioc.services;
 
+import com.cyecize.ioc.annotations.Autowired;
 import com.cyecize.ioc.exceptions.BeanInstantiationException;
 import com.cyecize.ioc.exceptions.PostConstructException;
 import com.cyecize.ioc.exceptions.ServiceInstantiationException;
@@ -8,6 +9,7 @@ import com.cyecize.ioc.models.ServiceBeanDetails;
 import com.cyecize.ioc.models.ServiceDetails;
 
 import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
@@ -25,7 +27,7 @@ public class ObjectInstantiationServiceImpl implements ObjectInstantiationServic
      * @param constructorParams instantiated dependencies.
      */
     @Override
-    public void createInstance(ServiceDetails serviceDetails, Object... constructorParams) throws ServiceInstantiationException {
+    public void createInstance(ServiceDetails serviceDetails, Object[] constructorParams, Object[] autowiredFieldInstances) throws ServiceInstantiationException {
         final Constructor targetConstructor = serviceDetails.getTargetConstructor();
 
         if (constructorParams.length != targetConstructor.getParameterCount()) {
@@ -35,9 +37,24 @@ public class ObjectInstantiationServiceImpl implements ObjectInstantiationServic
         try {
             final Object instance = targetConstructor.newInstance(constructorParams);
             serviceDetails.setInstance(instance);
+            this.setAutowiredFieldInstances(serviceDetails, autowiredFieldInstances);
             this.invokePostConstruct(serviceDetails);
         } catch (IllegalAccessException | InvocationTargetException | InstantiationException e) {
             throw new ServiceInstantiationException(e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Iterates all {@link Autowired} annotated fields and sets them a given instance.
+     *
+     * @param serviceDetails          - given service details.
+     * @param autowiredFieldInstances - field instances.
+     */
+    private void setAutowiredFieldInstances(ServiceDetails serviceDetails, Object[] autowiredFieldInstances) throws IllegalAccessException {
+        final Field[] autowireAnnotatedFields = serviceDetails.getAutowireAnnotatedFields();
+
+        for (int i = 0; i < autowireAnnotatedFields.length; i++) {
+            autowireAnnotatedFields[i].set(serviceDetails.getActualInstance(), autowiredFieldInstances[i]);
         }
     }
 
