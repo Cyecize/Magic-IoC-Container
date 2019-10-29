@@ -1,5 +1,6 @@
 package com.cyecize.ioc.services;
 
+import com.cyecize.ioc.config.MagicConfiguration;
 import com.cyecize.ioc.constants.Constants;
 import com.cyecize.ioc.exceptions.ClassLocationException;
 
@@ -20,9 +21,9 @@ public class ClassLocatorForDirectory implements ClassLocator {
 
     private final ClassLoader classLoader;
 
-    public ClassLocatorForDirectory(ClassLoader classLoader) {
+    public ClassLocatorForDirectory(MagicConfiguration configuration) {
         this.locatedClasses = new HashSet<>();
-        this.classLoader = classLoader;
+        this.classLoader = configuration.scanning().getClassLoader();
     }
 
     /**

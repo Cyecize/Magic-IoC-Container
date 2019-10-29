@@ -54,7 +54,7 @@ public class MagicInjector {
                 objectInstantiationService
         );
 
-        final Set<Class<?>> locatedClasses = locateClasses(startupDirectories);
+        final Set<Class<?>> locatedClasses = locateClasses(startupDirectories, configuration);
 
         final Set<ServiceDetails> mappedServices = scanningService.mapServices(locatedClasses);
         final List<ServiceDetails> serviceDetails = instantiationService.instantiateServicesAndBeans(mappedServices);
@@ -65,16 +65,16 @@ public class MagicInjector {
         return dependencyContainer;
     }
 
-    private static Set<Class<?>> locateClasses(File[] startupDirectories) {
+    private static Set<Class<?>> locateClasses(File[] startupDirectories, MagicConfiguration configuration) {
         final Set<Class<?>> locatedClasses = new HashSet<>();
         final DirectoryResolver directoryResolver = new DirectoryResolverImpl();
 
         for (File startupDirectory : startupDirectories) {
             final Directory directory = directoryResolver.resolveDirectory(startupDirectory);
 
-            ClassLocator classLocator = new ClassLocatorForDirectory(Thread.currentThread().getContextClassLoader());
+            ClassLocator classLocator = new ClassLocatorForDirectory(configuration);
             if (directory.getDirectoryType() == DirectoryType.JAR_FILE) {
-                classLocator = new ClassLocatorForJarFile();
+                classLocator = new ClassLocatorForJarFile(configuration);
             }
 
             locatedClasses.addAll(classLocator.locateClasses(directory.getDirectory()));

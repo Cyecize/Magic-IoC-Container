@@ -1,5 +1,6 @@
 package com.cyecize.ioc.services;
 
+import com.cyecize.ioc.config.MagicConfiguration;
 import com.cyecize.ioc.constants.Constants;
 import com.cyecize.ioc.exceptions.ClassLocationException;
 
@@ -19,9 +20,15 @@ import java.util.jar.JarFile;
  */
 public class ClassLocatorForJarFile implements ClassLocator {
 
+    private final ClassLoader classLoader;
+
+    public ClassLocatorForJarFile(MagicConfiguration configuration) {
+        this.classLoader = configuration.scanning().getClassLoader();
+    }
+
     /**
      * Creates JarFile from the given directory.
-     *
+     * <p>
      * Iterates all entries and checks if the entry name ends with ".class".
      * If that is the case, adds the class to a set of located classes.
      *
@@ -48,7 +55,7 @@ public class ClassLocatorForJarFile implements ClassLocator {
                         .replaceAll("\\\\", ".")
                         .replaceAll("/", ".");
 
-                locatedClasses.add(Class.forName(className, true, Thread.currentThread().getContextClassLoader()));
+                locatedClasses.add(Class.forName(className, true, this.classLoader));
             }
 
         } catch (IOException | ClassNotFoundException e) {

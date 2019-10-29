@@ -146,6 +146,10 @@ public class ServicesScanningServiceImpl implements ServicesScanningService {
             }
         }
 
+        if (cls.getSuperclass() != null) {
+            return this.findVoidMethodWithZeroParamsAndAnnotations(annotation, cls.getSuperclass());
+        }
+
         return null;
     }
 

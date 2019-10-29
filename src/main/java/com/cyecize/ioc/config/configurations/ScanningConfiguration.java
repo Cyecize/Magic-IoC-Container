@@ -14,11 +14,14 @@ public class ScanningConfiguration extends BaseSubConfiguration {
 
     private final Map<Class<?>, Class<? extends Annotation>> additionalClasses;
 
+    private ClassLoader classLoader;
+
     public ScanningConfiguration(MagicConfiguration parentConfig) {
         super(parentConfig);
         this.customServiceAnnotations = new HashSet<>();
         this.customBeanAnnotations = new HashSet<>();
         this.additionalClasses = new HashMap<>();
+        this.classLoader = Thread.currentThread().getContextClassLoader();
     }
 
     public ScanningConfiguration addCustomServiceAnnotation(Class<? extends Annotation> annotation) {
@@ -46,6 +49,11 @@ public class ScanningConfiguration extends BaseSubConfiguration {
         return this;
     }
 
+    public ScanningConfiguration setClassLoader(ClassLoader classLoader) {
+        this.classLoader = classLoader;
+        return this;
+    }
+
     public Set<Class<? extends Annotation>> getCustomBeanAnnotations() {
         return this.customBeanAnnotations;
     }
@@ -56,5 +64,9 @@ public class ScanningConfiguration extends BaseSubConfiguration {
 
     public Map<Class<?>, Class<? extends Annotation>> getAdditionalClasses() {
         return this.additionalClasses;
+    }
+
+    public ClassLoader getClassLoader() {
+        return this.classLoader;
     }
 }
