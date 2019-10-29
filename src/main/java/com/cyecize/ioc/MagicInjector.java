@@ -10,6 +10,7 @@ import com.cyecize.ioc.models.Directory;
 import java.io.File;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -54,10 +55,23 @@ public class MagicInjector {
                 objectInstantiationService
         );
 
-        final Set<Class<?>> locatedClasses = locateClasses(startupDirectories, configuration);
+        final Set<Class<?>> locatedClasses = new HashSet<>();
+        final Set<ServiceDetails> mappedServices = new HashSet<>();
+        final List<ServiceDetails> serviceDetails = new ArrayList<>();
 
-        final Set<ServiceDetails> mappedServices = scanningService.mapServices(locatedClasses);
-        final List<ServiceDetails> serviceDetails = instantiationService.instantiateServicesAndBeans(mappedServices);
+        final Thread runner = new Thread(() -> {
+            locatedClasses.addAll(locateClasses(startupDirectories));
+            mappedServices.addAll(scanningService.mapServices(locatedClasses));
+            serviceDetails.addAll(instantiationService.instantiateServicesAndBeans(mappedServices));
+        });
+
+        runner.setContextClassLoader(configuration.scanning().getClassLoader());
+        runner.start();
+        try {
+            runner.join();
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
 
         final DependencyContainer dependencyContainer = new DependencyContainerImpl();
         dependencyContainer.init(locatedClasses, serviceDetails, objectInstantiationService);
@@ -65,16 +79,16 @@ public class MagicInjector {
         return dependencyContainer;
     }
 
-    private static Set<Class<?>> locateClasses(File[] startupDirectories, MagicConfiguration configuration) {
+    private static Set<Class<?>> locateClasses(File[] startupDirectories) {
         final Set<Class<?>> locatedClasses = new HashSet<>();
         final DirectoryResolver directoryResolver = new DirectoryResolverImpl();
 
         for (File startupDirectory : startupDirectories) {
             final Directory directory = directoryResolver.resolveDirectory(startupDirectory);
 
-            ClassLocator classLocator = new ClassLocatorForDirectory(configuration);
+            ClassLocator classLocator = new ClassLocatorForDirectory();
             if (directory.getDirectoryType() == DirectoryType.JAR_FILE) {
-                classLocator = new ClassLocatorForJarFile(configuration);
+                classLocator = new ClassLocatorForJarFile();
             }
 
             locatedClasses.addAll(classLocator.locateClasses(directory.getDirectory()));
