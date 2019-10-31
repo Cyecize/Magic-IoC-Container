@@ -5,6 +5,8 @@ import com.cyecize.ioc.models.Directory;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 
 /**
  * DirectoryResolver implementation.
@@ -37,7 +39,7 @@ public class DirectoryResolverImpl implements DirectoryResolver {
      * @param cls - the given class.
      */
     private String getDirectory(Class<?> cls) {
-        return cls.getProtectionDomain().getCodeSource().getLocation().getFile();
+        return URLDecoder.decode(cls.getProtectionDomain().getCodeSource().getLocation().getFile(), StandardCharsets.UTF_8);
     }
 
     /**
@@ -45,7 +47,7 @@ public class DirectoryResolverImpl implements DirectoryResolver {
      * @return JAR_FILE or DIRECTORY.
      */
     private DirectoryType getDirectoryType(String directory) {
-        File file = new File(directory);
+        final File file = new File(directory);
 
         if (!file.isDirectory() && directory.endsWith(JAR_FILE_EXTENSION)) {
             return DirectoryType.JAR_FILE;
