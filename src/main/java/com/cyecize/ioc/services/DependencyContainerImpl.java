@@ -146,13 +146,24 @@ public class DependencyContainerImpl implements DependencyContainer {
      */
     @Override
     public void update(Object service) {
-        final ServiceDetails serviceDetails = this.getServiceDetails(service.getClass());
+        this.update(service.getClass(), service);
+    }
+
+    /**
+     * Replaces instance of a service with a new provided one.
+     *
+     * @param serviceType     given service type.
+     * @param serviceInstance new instance of a given service.
+     */
+    @Override
+    public void update(Class<?> serviceType, Object serviceInstance) {
+        final ServiceDetails serviceDetails = this.getServiceDetails(serviceType);
         if (serviceDetails == null) {
-            throw new IllegalArgumentException(String.format(SERVICE_NOT_FOUND_FORMAT, service));
+            throw new IllegalArgumentException(String.format(SERVICE_NOT_FOUND_FORMAT, serviceType.getName()));
         }
 
         this.instantiationService.destroyInstance(serviceDetails);
-        serviceDetails.setInstance(service);
+        serviceDetails.setInstance(serviceInstance);
     }
 
     /**
