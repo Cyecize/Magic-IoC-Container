@@ -18,7 +18,11 @@ public interface DependencyContainer {
 
     void update(Class<?> serviceType, Object serviceInstance);
 
+    void update(Class<?> serviceType, Object serviceInstance, boolean destroyOldInstance);
+
     <T> T getService(Class<T> serviceType);
+
+    <T> T getNewInstance(Class<?> serviceType);
 
     ServiceDetails getServiceDetails(Class<?> serviceType);
 

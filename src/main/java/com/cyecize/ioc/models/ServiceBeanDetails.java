@@ -1,5 +1,6 @@
 package com.cyecize.ioc.models;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 
 /**
@@ -19,11 +20,12 @@ public class ServiceBeanDetails extends ServiceDetails {
      */
     private final ServiceDetails rootService;
 
-    public ServiceBeanDetails(Class<?> beanType, Method originMethod, ServiceDetails rootService) {
+    public ServiceBeanDetails(Class<?> beanType, Method originMethod, ServiceDetails rootService, Annotation annotation) {
         this.setServiceType(beanType);
         this.setBeans(new Method[0]);
         this.originMethod = originMethod;
         this.rootService = rootService;
+        this.setAnnotation(annotation);
     }
 
     public Method getOriginMethod() {

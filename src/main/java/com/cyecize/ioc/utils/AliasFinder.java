@@ -16,26 +16,17 @@ public class AliasFinder {
         return null;
     }
 
-    public static boolean isAliasAnnotationPresent(Annotation[] annotations, Class<? extends Annotation> requiredAnnotation) {
-
-        for (Annotation declaredAnnotation : annotations) {
-            final Class<?> alias = getAliasAnnotation(declaredAnnotation, requiredAnnotation);
-
-            if (alias != null) {
-                return true;
+    public static Annotation getAnnotation(Annotation[] annotations, Class<? extends Annotation> requiredAnnotation) {
+        for (Annotation annotation : annotations) {
+            if (annotation.annotationType() == requiredAnnotation || getAliasAnnotation(annotation, requiredAnnotation) != null) {
+                return annotation;
             }
         }
 
-        return false;
+        return null;
     }
 
     public static boolean isAnnotationPresent(Annotation[] annotations, Class<? extends Annotation> requiredAnnotation) {
-        for (Annotation annotation : annotations) {
-            if (annotation.annotationType() == requiredAnnotation) {
-                return true;
-            }
-        }
-
-        return isAliasAnnotationPresent(annotations, requiredAnnotation);
+        return getAnnotation(annotations, requiredAnnotation) != null;
     }
 }

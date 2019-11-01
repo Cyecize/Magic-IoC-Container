@@ -86,22 +86,16 @@ public class DependencyContainerImpl implements DependencyContainer {
      * @param serviceDetails - target service.
      */
     private void handleReload(ServiceDetails serviceDetails) {
-        if (serviceDetails instanceof ServiceBeanDetails) {
-            ServiceBeanDetails serviceBeanDetails = (ServiceBeanDetails) serviceDetails;
-            this.instantiationService.createBeanInstance(serviceBeanDetails);
+        final Object newInstance = this.getNewInstance(serviceDetails.getServiceType());
+        serviceDetails.setInstance(newInstance);
 
-            if (!serviceBeanDetails.hasProxyInstance()) {
+        if (serviceDetails instanceof ServiceBeanDetails) {
+            if (!((ServiceBeanDetails) serviceDetails).hasProxyInstance()) {
                 //Since bean has no proxy, reload all dependant classes.
                 for (ServiceDetails dependantService : serviceDetails.getDependantServices()) {
                     this.reload(dependantService);
                 }
             }
-        } else {
-            this.instantiationService.createInstance(
-                    serviceDetails,
-                    this.collectDependencies(serviceDetails),
-                    this.collectAutowiredFieldsDependencies(serviceDetails)
-            );
         }
     }
 
@@ -157,12 +151,20 @@ public class DependencyContainerImpl implements DependencyContainer {
      */
     @Override
     public void update(Class<?> serviceType, Object serviceInstance) {
+        this.update(serviceType, serviceInstance, true);
+    }
+
+    @Override
+    public void update(Class<?> serviceType, Object serviceInstance, boolean destroyOldInstance) {
         final ServiceDetails serviceDetails = this.getServiceDetails(serviceType);
         if (serviceDetails == null) {
             throw new IllegalArgumentException(String.format(SERVICE_NOT_FOUND_FORMAT, serviceType.getName()));
         }
 
-        this.instantiationService.destroyInstance(serviceDetails);
+        if (destroyOldInstance) {
+            this.instantiationService.destroyInstance(serviceDetails);
+        }
+
         serviceDetails.setInstance(serviceInstance);
     }
 
@@ -183,6 +185,34 @@ public class DependencyContainerImpl implements DependencyContainer {
         }
 
         return null;
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public <T> T getNewInstance(Class<?> serviceType) {
+        final ServiceDetails serviceDetails = this.getServiceDetails(serviceType);
+
+        if (serviceDetails == null) {
+            throw new IllegalArgumentException(String.format(SERVICE_NOT_FOUND_FORMAT, serviceType.getName()));
+        }
+
+        final Object oldInstance = serviceDetails.getActualInstance();
+
+        if (serviceDetails instanceof ServiceBeanDetails) {
+            ServiceBeanDetails serviceBeanDetails = (ServiceBeanDetails) serviceDetails;
+            this.instantiationService.createBeanInstance(serviceBeanDetails);
+        } else {
+            this.instantiationService.createInstance(
+                    serviceDetails,
+                    this.collectDependencies(serviceDetails),
+                    this.collectAutowiredFieldsDependencies(serviceDetails)
+            );
+        }
+
+        final Object newInstance = serviceDetails.getActualInstance();
+        serviceDetails.setInstance(oldInstance);
+
+        return (T) newInstance;
     }
 
     /**

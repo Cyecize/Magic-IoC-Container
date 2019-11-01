@@ -1,5 +1,6 @@
 package com.cyecize.ioc.services;
 
+import com.cyecize.ioc.annotations.Bean;
 import com.cyecize.ioc.annotations.Nullable;
 import com.cyecize.ioc.config.configurations.InstantiationConfiguration;
 import com.cyecize.ioc.exceptions.ServiceInstantiationException;
@@ -114,7 +115,12 @@ public class ServicesInstantiationServiceImpl implements ServicesInstantiationSe
      */
     private void registerBeans(ServiceDetails serviceDetails) {
         for (Method beanMethod : serviceDetails.getBeans()) {
-            ServiceBeanDetails beanDetails = new ServiceBeanDetails(beanMethod.getReturnType(), beanMethod, serviceDetails);
+            final ServiceBeanDetails beanDetails = new ServiceBeanDetails(
+                    beanMethod.getReturnType(),
+                    beanMethod, serviceDetails,
+                    AliasFinder.getAnnotation(beanMethod.getDeclaredAnnotations(), Bean.class)
+            );
+
             this.instantiationService.createBeanInstance(beanDetails);
             ProxyUtils.createBeanProxyInstance(beanDetails);
 
