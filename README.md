@@ -1,3 +1,4 @@
+
 Magic-IoC-Container
 -----------------------
 Custom made dependency container replicating the functionalities of Spring Boot.
@@ -17,6 +18,8 @@ The Goal
 This project is created with the purpose to help understand how IoC Containers work under the hood.
 There is a video series on youtube where I am building this project:
 https://www.youtube.com/watch?v=JHxFJwxb0FQ
+* Note that after the video I did some changes to the app so if you are coming from there, please checkout to the following commit to be able to follow more easily.
+* commit hash: 4ba9ad9eee6014598e356f2bb16e6819e53948fb -> Added project source code.
 
 How to run the app?
 ------------------
