@@ -1,16 +1,27 @@
 package com.cyecize.ioc.services;
 
 import com.cyecize.ioc.annotations.*;
+import com.cyecize.ioc.middleware.ServiceDetailsCreated;
+import com.cyecize.ioc.enums.ScopeType;
+import com.cyecize.ioc.models.ServiceBeanDetails;
 import com.cyecize.ioc.models.ServiceDetails;
 import com.cyecize.ioc.config.configurations.ScanningConfiguration;
 import com.cyecize.ioc.utils.AliasFinder;
+import com.cyecize.ioc.utils.AnnotationUtils;
 import com.cyecize.ioc.utils.ServiceDetailsConstructComparator;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.LinkedHashSet;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -51,11 +62,18 @@ public class ServicesScanningServiceImpl implements ServicesScanningService {
                     cls,
                     annotation,
                     this.findSuitableConstructor(cls),
+                    this.findInstanceName(cls.getDeclaredAnnotations()),
                     this.findVoidMethodWithZeroParamsAndAnnotations(PostConstruct.class, cls),
                     this.findVoidMethodWithZeroParamsAndAnnotations(PreDestroy.class, cls),
-                    this.findBeans(cls),
+                    this.findScope(cls),
                     this.findAutowireAnnotatedFields(cls, new ArrayList<>()).toArray(new Field[0])
             );
+
+            serviceDetails.setBeans(this.findBeans(serviceDetails));
+
+            for (ServiceDetailsCreated callback : this.configuration.getServiceDetailsCreatedCallbacks()) {
+                callback.serviceDetailsCreated(serviceDetails);
+            }
 
             serviceDetailsStorage.add(serviceDetails);
         }
@@ -141,14 +159,14 @@ public class ServicesScanningServiceImpl implements ServicesScanningService {
     /**
      * Scans a given class for methods that are considered beans.
      *
-     * @param cls the given class.
+     * @param rootService - the service from where the bean is being called.
      * @return array or method references that are bean compliant.
      */
-    private Method[] findBeans(Class<?> cls) {
+    private Collection<ServiceBeanDetails> findBeans(ServiceDetails rootService) {
         final Set<Class<? extends Annotation>> beanAnnotations = this.configuration.getCustomBeanAnnotations();
-        final Set<Method> beanMethods = new HashSet<>();
+        final Set<ServiceBeanDetails> beans = new HashSet<>();
 
-        for (Method method : cls.getDeclaredMethods()) {
+        for (Method method : rootService.getServiceType().getDeclaredMethods()) {
             if (method.getParameterCount() != 0 || method.getReturnType() == void.class || method.getReturnType() == Void.class) {
                 continue;
             }
@@ -158,14 +176,59 @@ public class ServicesScanningServiceImpl implements ServicesScanningService {
             for (Class<? extends Annotation> beanAnnotation : beanAnnotations) {
                 if (AliasFinder.isAnnotationPresent(methodDeclaredAnnotations, beanAnnotation)) {
                     method.setAccessible(true);
-                    beanMethods.add(method);
+                    beans.add(new ServiceBeanDetails(
+                            method.getReturnType(),
+                            method,
+                            rootService,
+                            AliasFinder.getAnnotation(methodDeclaredAnnotations, beanAnnotation),
+                            this.findScope(method),
+                            this.findInstanceName(method.getDeclaredAnnotations())
+                    ));
 
                     break;
                 }
             }
         }
 
-        return beanMethods.toArray(Method[]::new);
+        return beans;
+    }
+
+    /**
+     * Search for {@link Scope} annotation within the class and get it's value.
+     *
+     * @param cls - given class.
+     * @return the value of the annotation or SINGLETON as default.
+     */
+    private ScopeType findScope(Class<?> cls) {
+        if (cls.isAnnotationPresent(Scope.class)) {
+            return cls.getDeclaredAnnotation(Scope.class).value();
+        }
+
+        return ScopeType.DEFAULT_SCOPE;
+    }
+
+    /**
+     * Search for {@link Scope} annotation within the method and get it's value.
+     *
+     * @param method - given bean method.
+     * @return the value of the annotation or SINGLETON as default.
+     */
+    private ScopeType findScope(Method method) {
+        if (method.isAnnotationPresent(Scope.class)) {
+            return method.getDeclaredAnnotation(Scope.class).value();
+        }
+
+        return ScopeType.DEFAULT_SCOPE;
+    }
+
+    private String findInstanceName(Annotation[] annotations) {
+        if (!AliasFinder.isAnnotationPresent(annotations, NamedInstance.class)) {
+            return null;
+        }
+
+        final Annotation annotation = AliasFinder.getAnnotation(annotations, NamedInstance.class);
+
+        return AnnotationUtils.getAnnotationValue(annotation).toString();
     }
 
     private List<Field> findAutowireAnnotatedFields(Class<?> cls, List<Field> fields) {

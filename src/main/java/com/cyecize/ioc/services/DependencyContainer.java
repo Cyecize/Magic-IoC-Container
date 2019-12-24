@@ -22,9 +22,15 @@ public interface DependencyContainer {
 
     <T> T getService(Class<T> serviceType);
 
+    <T> T getService(Class<?> serviceType, String instanceName);
+
     <T> T getNewInstance(Class<?> serviceType);
 
+    <T> T getNewInstance(Class<?> serviceType, String instanceName);
+
     ServiceDetails getServiceDetails(Class<?> serviceType);
+
+    ServiceDetails getServiceDetails(Class<?> serviceType, String instanceName);
 
     Collection<Class<?>> getAllScannedClasses();
 

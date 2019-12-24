@@ -1,7 +1,10 @@
 package com.cyecize.ioc.models;
 
+import com.cyecize.ioc.enums.ScopeType;
+
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 
 /**
  * Descendant of @ServiceDetails that is made to contain additional bean details.
@@ -16,16 +19,21 @@ public class ServiceBeanDetails extends ServiceDetails {
     private final Method originMethod;
 
     /**
-     * The service from this bean was created.
+     * The service from which this bean was created.
      */
     private final ServiceDetails rootService;
 
-    public ServiceBeanDetails(Class<?> beanType, Method originMethod, ServiceDetails rootService, Annotation annotation) {
-        this.setServiceType(beanType);
-        this.setBeans(new Method[0]);
+    public ServiceBeanDetails(Class<?> beanType, Method originMethod,
+                              ServiceDetails rootService, Annotation annotation,
+                              ScopeType scopeType,
+                              String instanceName) {
+        super.setServiceType(beanType);
+        super.setBeans(new ArrayList<>(0));
         this.originMethod = originMethod;
         this.rootService = rootService;
-        this.setAnnotation(annotation);
+        super.setAnnotation(annotation);
+        super.setScopeType(scopeType);
+        super.setInstanceName(instanceName);
     }
 
     public Method getOriginMethod() {
@@ -34,18 +42,5 @@ public class ServiceBeanDetails extends ServiceDetails {
 
     public ServiceDetails getRootService() {
         return this.rootService;
-    }
-
-    @Override
-    public Object getProxyInstance() {
-        if (super.getProxyInstance() != null) {
-            return super.getProxyInstance();
-        }
-
-        return this.getActualInstance();
-    }
-
-    public boolean hasProxyInstance() {
-        return super.getProxyInstance() != null;
     }
 }

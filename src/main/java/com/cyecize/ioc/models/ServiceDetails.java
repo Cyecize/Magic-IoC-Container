@@ -1,10 +1,14 @@
 package com.cyecize.ioc.models;
 
+import com.cyecize.ioc.annotations.Autowired;
+import com.cyecize.ioc.enums.ScopeType;
+
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.util.*;
+import java.util.Collection;
+import java.util.LinkedList;
 
 /**
  * Simple POJO class that holds information about a given class.
@@ -33,6 +37,11 @@ public class ServiceDetails {
     private Constructor<?> targetConstructor;
 
     /**
+     * The name of the instance or null if no name has been given.
+     */
+    private String instanceName;
+
+    /**
      * Service instance.
      */
     private Object instance;
@@ -53,33 +62,48 @@ public class ServiceDetails {
     private Method preDestroyMethod;
 
     /**
+     * Holds information for service's scope.
+     */
+    private ScopeType scopeType;
+
+    /**
      * The reference to all @Bean (or a custom one) annotated methods.
      */
-    private Method[] beans;
+    private Collection<ServiceBeanDetails> beans;
 
+    /**
+     * Array of fields within the service that are annotated with @{@link Autowired}
+     */
     private Field[] autowireAnnotatedFields;
 
     /**
-     * List of all services that depend on this one.
+     * Collection with details about resolved dependencies from the target constructor.
      */
-    private final List<ServiceDetails> dependantServices;
+    private LinkedList<DependencyParam> resolvedConstructorParams;
 
-    public ServiceDetails() {
-        this.dependantServices = new ArrayList<>();
+    /**
+     * Collection with details about resolved {@link Autowired} field dependencies.
+     */
+    private LinkedList<DependencyParam> resolvedFields;
+
+    protected ServiceDetails() {
+
     }
 
     public ServiceDetails(Class<?> serviceType,
                           Annotation annotation, Constructor<?> targetConstructor,
+                          String instanceName,
                           Method postConstructMethod, Method preDestroyMethod,
-                          Method[] beans,
+                          ScopeType scopeType,
                           Field[] autowireAnnotatedFields) {
         this();
         this.setServiceType(serviceType);
         this.setAnnotation(annotation);
         this.setTargetConstructor(targetConstructor);
+        this.setInstanceName(instanceName);
         this.setPostConstructMethod(postConstructMethod);
         this.setPreDestroyMethod(preDestroyMethod);
-        this.setBeans(beans);
+        this.setScopeType(scopeType);
         this.setAutowireAnnotatedFields(autowireAnnotatedFields);
     }
 
@@ -87,7 +111,7 @@ public class ServiceDetails {
         return this.serviceType;
     }
 
-    public void setServiceType(Class<?> serviceType) {
+    void setServiceType(Class<?> serviceType) {
         this.serviceType = serviceType;
     }
 
@@ -107,7 +131,23 @@ public class ServiceDetails {
         this.targetConstructor = targetConstructor;
     }
 
+    public String getInstanceName() {
+        return this.instanceName;
+    }
+
+    public void setInstanceName(String instanceName) {
+        this.instanceName = instanceName;
+    }
+
     public Object getActualInstance() {
+        return this.instance;
+    }
+
+    public Object getInstance() {
+        if (this.proxyInstance != null) {
+            return this.proxyInstance;
+        }
+
         return this.instance;
     }
 
@@ -127,6 +167,10 @@ public class ServiceDetails {
         this.proxyInstance = proxyInstance;
     }
 
+    public boolean hasProxyInstance() {
+        return this.proxyInstance != null;
+    }
+
     public Method getPostConstructMethod() {
         return this.postConstructMethod;
     }
@@ -143,11 +187,19 @@ public class ServiceDetails {
         this.preDestroyMethod = preDestroyMethod;
     }
 
-    public Method[] getBeans() {
+    public ScopeType getScopeType() {
+        return this.scopeType;
+    }
+
+    public void setScopeType(ScopeType scopeType) {
+        this.scopeType = scopeType;
+    }
+
+    public Collection<ServiceBeanDetails> getBeans() {
         return this.beans;
     }
 
-    public void setBeans(Method[] beans) {
+    public void setBeans(Collection<ServiceBeanDetails> beans) {
         this.beans = beans;
     }
 
@@ -159,12 +211,20 @@ public class ServiceDetails {
         this.autowireAnnotatedFields = autowireAnnotatedFields;
     }
 
-    public List<ServiceDetails> getDependantServices() {
-        return Collections.unmodifiableList(this.dependantServices);
+    public LinkedList<DependencyParam> getResolvedConstructorParams() {
+        return this.resolvedConstructorParams;
     }
 
-    public void addDependantService(ServiceDetails serviceDetails) {
-        this.dependantServices.add(serviceDetails);
+    public void setResolvedConstructorParams(LinkedList<DependencyParam> resolvedConstructorParams) {
+        this.resolvedConstructorParams = resolvedConstructorParams;
+    }
+
+    public LinkedList<DependencyParam> getResolvedFields() {
+        return this.resolvedFields;
+    }
+
+    public void setResolvedFields(LinkedList<DependencyParam> resolvedFields) {
+        this.resolvedFields = resolvedFields;
     }
 
     /**

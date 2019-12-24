@@ -1,5 +1,6 @@
 package com.cyecize.ioc.config.configurations;
 
+import com.cyecize.ioc.middleware.ServiceDetailsCreated;
 import com.cyecize.ioc.config.BaseSubConfiguration;
 import com.cyecize.ioc.config.MagicConfiguration;
 
@@ -14,6 +15,8 @@ public class ScanningConfiguration extends BaseSubConfiguration {
 
     private final Map<Class<?>, Class<? extends Annotation>> additionalClasses;
 
+    private final Set<ServiceDetailsCreated> serviceDetailsCreatedCallbacks;
+
     private ClassLoader classLoader;
 
     public ScanningConfiguration(MagicConfiguration parentConfig) {
@@ -21,6 +24,7 @@ public class ScanningConfiguration extends BaseSubConfiguration {
         this.customServiceAnnotations = new HashSet<>();
         this.customBeanAnnotations = new HashSet<>();
         this.additionalClasses = new HashMap<>();
+        this.serviceDetailsCreatedCallbacks = new HashSet<>();
         this.classLoader = Thread.currentThread().getContextClassLoader();
     }
 
@@ -49,6 +53,11 @@ public class ScanningConfiguration extends BaseSubConfiguration {
         return this;
     }
 
+    public ScanningConfiguration addServiceDetailsCreatedCallback(ServiceDetailsCreated serviceDetailsCreated) {
+        this.serviceDetailsCreatedCallbacks.add(serviceDetailsCreated);
+        return this;
+    }
+
     public ScanningConfiguration setClassLoader(ClassLoader classLoader) {
         this.classLoader = classLoader;
         return this;
@@ -64,6 +73,10 @@ public class ScanningConfiguration extends BaseSubConfiguration {
 
     public Map<Class<?>, Class<? extends Annotation>> getAdditionalClasses() {
         return this.additionalClasses;
+    }
+
+    public Set<ServiceDetailsCreated> getServiceDetailsCreatedCallbacks() {
+        return this.serviceDetailsCreatedCallbacks;
     }
 
     public ClassLoader getClassLoader() {

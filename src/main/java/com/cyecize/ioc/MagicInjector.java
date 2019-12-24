@@ -10,6 +10,7 @@ import com.cyecize.ioc.models.Directory;
 import java.io.File;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -52,18 +53,13 @@ public class MagicInjector {
         final ObjectInstantiationService objectInstantiationService = new ObjectInstantiationServiceImpl();
         final ServicesInstantiationService instantiationService = new ServicesInstantiationServiceImpl(
                 configuration.instantiations(),
-                objectInstantiationService
+                objectInstantiationService,
+                new DependencyResolveServiceImpl(configuration.instantiations())
         );
 
         final Set<Class<?>> locatedClasses = new HashSet<>();
-        final Set<ServiceDetails> mappedServices = new HashSet<>();
-        final List<ServiceDetails> serviceDetails = new ArrayList<>();
 
-        final Thread runner = new Thread(() -> {
-            locatedClasses.addAll(locateClasses(startupDirectories));
-            mappedServices.addAll(scanningService.mapServices(locatedClasses));
-            serviceDetails.addAll(instantiationService.instantiateServicesAndBeans(mappedServices));
-        });
+        final Thread runner = new Thread(() -> locatedClasses.addAll(locateClasses(startupDirectories)));
 
         runner.setContextClassLoader(configuration.scanning().getClassLoader());
         runner.start();
@@ -73,7 +69,10 @@ public class MagicInjector {
             throw new RuntimeException(e);
         }
 
-        final DependencyContainer dependencyContainer = new DependencyContainerImpl();
+        final Set<ServiceDetails> mappedServices = new HashSet<>(scanningService.mapServices(locatedClasses));
+        final List<ServiceDetails> serviceDetails = new ArrayList<>(instantiationService.instantiateServicesAndBeans(mappedServices));
+
+        final DependencyContainer dependencyContainer = new DependencyContainerCached();
         dependencyContainer.init(locatedClasses, serviceDetails, objectInstantiationService);
 
         return dependencyContainer;
@@ -108,23 +107,26 @@ public class MagicInjector {
      * @param startupClass any class from the client side.
      */
     private static void runStartUpMethod(Class<?> startupClass, DependencyContainer dependencyContainer) {
-        final ServiceDetails serviceDetails = dependencyContainer.getServiceDetails(startupClass);
+        final ServiceDetails serviceDetails = dependencyContainer.getServiceDetails(startupClass, null);
 
         if (serviceDetails == null) {
             return;
         }
 
         for (Method declaredMethod : serviceDetails.getServiceType().getDeclaredMethods()) {
-            if (declaredMethod.getParameterCount() != 0 ||
-                    (declaredMethod.getReturnType() != void.class &&
-                            declaredMethod.getReturnType() != Void.class)
+            if ((declaredMethod.getReturnType() != void.class &&
+                    declaredMethod.getReturnType() != Void.class)
                     || !declaredMethod.isAnnotationPresent(StartUp.class)) {
                 continue;
             }
 
             declaredMethod.setAccessible(true);
+            final Object[] params = Arrays.stream(declaredMethod.getParameterTypes())
+                    .map(dependencyContainer::getService)
+                    .toArray(Object[]::new);
+
             try {
-                declaredMethod.invoke(serviceDetails.getActualInstance());
+                declaredMethod.invoke(serviceDetails.getActualInstance(), params);
             } catch (IllegalAccessException | InvocationTargetException e) {
                 throw new RuntimeException(e);
             }

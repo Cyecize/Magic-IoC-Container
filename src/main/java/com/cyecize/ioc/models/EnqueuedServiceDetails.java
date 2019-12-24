@@ -1,9 +1,14 @@
 package com.cyecize.ioc.models;
 
 import com.cyecize.ioc.annotations.Autowired;
+import com.cyecize.ioc.annotations.Qualifier;
+import com.cyecize.ioc.utils.AliasFinder;
+import com.cyecize.ioc.utils.AnnotationUtils;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
-import java.util.Arrays;
+import java.lang.reflect.Parameter;
+import java.util.LinkedList;
 
 /**
  * Simple POJO class that keeps information about a service, its
@@ -17,143 +22,75 @@ public class EnqueuedServiceDetails {
     private final ServiceDetails serviceDetails;
 
     /**
-     * Array of dependencies that the target constructor of the service requires.
+     * List of dependencies that the target constructor of the service requires.
      */
-    private final Class<?>[] dependencies;
+    private final LinkedList<DependencyParam> constructorParams;
 
     /**
-     * Keeps track for each dependency whether it is required
+     * List of dependencies that are required from {@link Autowired} annotated fields.
      */
-    private final boolean[] dependenciesRequirement;
-
-    /**
-     * Array of instances matching the types in @dependencies.
-     */
-    private final Object[] dependencyInstances;
-
-    /**
-     * Array of dependencies that are required from {@link Autowired} annotated fields.
-     */
-    private final Class<?>[] fieldDependencies;
-
-    /**
-     * Array of instances matching the types in @fieldDependencies
-     */
-    private final Object[] fieldDependencyInstances;
+    private final LinkedList<DependencyParam> fieldDependencies;
 
     public EnqueuedServiceDetails(ServiceDetails serviceDetails) {
         this.serviceDetails = serviceDetails;
-        this.dependencies = serviceDetails.getTargetConstructor().getParameterTypes();
-        this.dependenciesRequirement = new boolean[this.dependencies.length];
-        this.dependencyInstances = new Object[this.dependencies.length];
-        this.fieldDependencies = new Class[this.serviceDetails.getAutowireAnnotatedFields().length];
-        this.fieldDependencyInstances = new Object[this.serviceDetails.getAutowireAnnotatedFields().length];
-
-        Arrays.fill(this.dependenciesRequirement, true);
+        this.constructorParams = new LinkedList<>();
+        this.fieldDependencies = new LinkedList<>();
+        this.fillConstructorParams();
         this.fillFieldDependencyTypes();
-    }
-
-    private void fillFieldDependencyTypes() {
-        final Field[] autowireAnnotatedFields = this.serviceDetails.getAutowireAnnotatedFields();
-
-        for (int i = 0; i < autowireAnnotatedFields.length; i++) {
-            this.fieldDependencies[i] = autowireAnnotatedFields[i].getType();
-        }
     }
 
     public ServiceDetails getServiceDetails() {
         return this.serviceDetails;
     }
 
-    public Class<?>[] getDependencies() {
-        return this.dependencies;
+    public LinkedList<DependencyParam> getConstructorParams() {
+        return this.constructorParams;
     }
 
-    public Object[] getDependencyInstances() {
-        return this.dependencyInstances;
+    public Object[] getConstructorInstances() {
+        return this.constructorParams.stream()
+                .map(DependencyParam::getInstance)
+                .toArray(Object[]::new);
     }
 
-    public Class<?>[] getFieldDependencies() {
+    public LinkedList<DependencyParam> getFieldDependencies() {
         return this.fieldDependencies;
     }
 
-    public Object[] getFieldDependencyInstances() {
-        return this.fieldDependencyInstances;
+    public Object[] getFieldInstances() {
+        return this.fieldDependencies.stream()
+                .map(DependencyParam::getInstance)
+                .toArray(Object[]::new);
     }
 
-    /**
-     * Adds the object instance in the array of instantiated dependencies
-     * by keeping the exact same position as the target constructor of the service has it.
-     *
-     * @param instance the given dependency instance.
-     */
-    public void addDependencyInstance(Object instance) {
-        final Class<?> instanceType = instance.getClass();
-        for (int i = 0; i < this.dependencies.length; i++) {
-            if (this.dependencies[i].isAssignableFrom(instanceType)) {
-                this.dependencyInstances[i] = instance;
-            }
-        }
-
-        for (int i = 0; i < this.fieldDependencies.length; i++) {
-            if (this.fieldDependencies[i].isAssignableFrom(instanceType)) {
-                this.fieldDependencyInstances[i] = instance;
-            }
+    private void fillConstructorParams() {
+        for (Parameter parameter : this.serviceDetails.getTargetConstructor().getParameters()) {
+            this.constructorParams.add(new DependencyParam(
+                    parameter.getType(),
+                    this.getInstanceName(parameter.getDeclaredAnnotations()),
+                    parameter.getDeclaredAnnotations()
+            ));
         }
     }
 
-    /**
-     * Checks if all dependencies have corresponding instances.
-     *
-     * @return true of ann dependency instances are available.
-     */
-    public boolean isResolved() {
-
-        for (int i = 0; i < this.dependencyInstances.length; i++) {
-            if (this.dependencyInstances[i] == null && this.dependenciesRequirement[i]) {
-                return false;
-            }
+    private void fillFieldDependencyTypes() {
+        for (Field autowireAnnotatedField : this.serviceDetails.getAutowireAnnotatedFields()) {
+            this.fieldDependencies.add(new DependencyParam(
+                    autowireAnnotatedField.getType(),
+                    this.getInstanceName(autowireAnnotatedField.getDeclaredAnnotations()),
+                    autowireAnnotatedField.getDeclaredAnnotations()
+            ));
         }
-
-        for (Object fieldDependencyInstance : this.fieldDependencyInstances) {
-            if (fieldDependencyInstance == null) {
-                return false;
-            }
-        }
-
-        return true;
     }
 
-    /**
-     * Checks if a given class type is present in the array of required
-     * dependencies.
-     *
-     * @param dependencyType - the given class type.
-     * @return true if the given type is present in the array of required dependencies.
-     */
-    public boolean isDependencyRequired(Class<?> dependencyType) {
-        for (Class<?> dependency : this.dependencies) {
-            if (dependency.isAssignableFrom(dependencyType)) {
-                return true;
-            }
+    private String getInstanceName(Annotation[] annotations) {
+        final Annotation annotation = AliasFinder.getAnnotation(annotations, Qualifier.class);
+
+        if (annotation != null) {
+            return AnnotationUtils.getAnnotationValue(annotation).toString();
         }
 
-        for (Class<?> fieldDependency : this.fieldDependencies) {
-            if (fieldDependency.isAssignableFrom(dependencyType)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    public void setDependencyNotNull(Class<?> dependencyType, boolean isRequired) {
-        for (int i = 0; i < this.dependenciesRequirement.length; i++) {
-            if (this.dependencies[i].isAssignableFrom(dependencyType)) {
-                this.dependenciesRequirement[i] = isRequired;
-                return;
-            }
-        }
+        return null;
     }
 
     @Override

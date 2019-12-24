@@ -1,21 +1,15 @@
 package com.cyecize.ioc.services;
 
-import com.cyecize.ioc.annotations.Bean;
-import com.cyecize.ioc.annotations.Nullable;
 import com.cyecize.ioc.config.configurations.InstantiationConfiguration;
+import com.cyecize.ioc.enums.ScopeType;
 import com.cyecize.ioc.exceptions.ServiceInstantiationException;
-import com.cyecize.ioc.models.EnqueuedServiceDetails;
-import com.cyecize.ioc.models.ServiceBeanDetails;
-import com.cyecize.ioc.models.ServiceDetails;
-import com.cyecize.ioc.utils.AliasFinder;
+import com.cyecize.ioc.models.*;
 import com.cyecize.ioc.utils.ProxyUtils;
 
-import java.lang.annotation.Annotation;
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
-import java.lang.reflect.Parameter;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.LinkedList;
+import java.util.Set;
 
 /**
  * {@link ServicesInstantiationService} implementation.
@@ -26,10 +20,6 @@ public class ServicesInstantiationServiceImpl implements ServicesInstantiationSe
 
     private static final String MAX_NUMBER_OF_ALLOWED_ITERATIONS_REACHED = "Maximum number of allowed iterations was reached '%s'. Remaining services: \n %s";
 
-    private static final String COULD_NOT_FIND_CONSTRUCTOR_PARAM_MSG = "Could not create instance of '%s'. Parameter '%s' implementation was not found";
-
-    private static final String COULD_NOT_FIND_FIELD_PARAM_MSG = "Could not create instance of '%s'. Implementation was not found for Autowired field '%s'.";
-
     /**
      * Configuration containing the maximum number or allowed iterations.
      */
@@ -37,28 +27,26 @@ public class ServicesInstantiationServiceImpl implements ServicesInstantiationSe
 
     private final ObjectInstantiationService instantiationService;
 
+    private final DependencyResolveService dependencyResolveService;
+
     /**
      * The storage for all services that are waiting to the instantiated.
      */
     private final LinkedList<EnqueuedServiceDetails> enqueuedServiceDetails;
 
     /**
-     * Contains all available types that will be loaded from this service.
-     * This includes all services and all beans.
+     * Internal Dependency container.
      */
-    private final List<Class<?>> allAvailableClasses;
+    private final DependencyContainer tempContainer;
 
-    /**
-     * Contains services and beans that have been loaded.
-     */
-    private final List<ServiceDetails> instantiatedServices;
-
-    public ServicesInstantiationServiceImpl(InstantiationConfiguration configuration, ObjectInstantiationService instantiationService) {
+    public ServicesInstantiationServiceImpl(InstantiationConfiguration configuration,
+                                            ObjectInstantiationService instantiationService,
+                                            DependencyResolveService dependencyResolveService) {
         this.configuration = configuration;
         this.instantiationService = instantiationService;
+        this.dependencyResolveService = dependencyResolveService;
         this.enqueuedServiceDetails = new LinkedList<>();
-        this.allAvailableClasses = new ArrayList<>();
-        this.instantiatedServices = new ArrayList<>();
+        this.tempContainer = new DependencyContainerInternal();
     }
 
     /**
@@ -75,34 +63,50 @@ public class ServicesInstantiationServiceImpl implements ServicesInstantiationSe
      *                                       One iteration is added only of a service has not been instantiated in this cycle.
      */
     @Override
-    public List<ServiceDetails> instantiateServicesAndBeans(Set<ServiceDetails> mappedServices) throws ServiceInstantiationException {
+    public Collection<ServiceDetails> instantiateServicesAndBeans(Set<ServiceDetails> mappedServices) throws ServiceInstantiationException {
         this.init(mappedServices);
 
         int counter = 0;
-        int maxNumberOfIterations = this.configuration.getMaximumAllowedIterations();
+        final int maxNumberOfIterations = this.configuration.getMaximumAllowedIterations();
         while (!this.enqueuedServiceDetails.isEmpty()) {
             if (counter > maxNumberOfIterations) {
-                throw new ServiceInstantiationException(String.format(MAX_NUMBER_OF_ALLOWED_ITERATIONS_REACHED, maxNumberOfIterations, this.enqueuedServiceDetails));
+                throw new ServiceInstantiationException(String.format(
+                        MAX_NUMBER_OF_ALLOWED_ITERATIONS_REACHED,
+                        maxNumberOfIterations,
+                        this.enqueuedServiceDetails)
+                );
             }
 
             final EnqueuedServiceDetails enqueuedServiceDetails = this.enqueuedServiceDetails.removeFirst();
 
-            if (enqueuedServiceDetails.isResolved()) {
-                ServiceDetails serviceDetails = enqueuedServiceDetails.getServiceDetails();
-                Object[] dependencyInstances = enqueuedServiceDetails.getDependencyInstances();
-
-                this.instantiationService.createInstance(serviceDetails, dependencyInstances, enqueuedServiceDetails.getFieldDependencyInstances());
-                ProxyUtils.createProxyInstance(serviceDetails, enqueuedServiceDetails.getDependencyInstances());
-
-                this.registerInstantiatedService(serviceDetails);
-                this.registerBeans(serviceDetails);
+            if (this.dependencyResolveService.isServiceResolved(enqueuedServiceDetails)) {
+                this.handleServiceResolved(enqueuedServiceDetails);
             } else {
                 this.enqueuedServiceDetails.addLast(enqueuedServiceDetails);
                 counter++;
             }
         }
 
-        return this.instantiatedServices;
+        return this.tempContainer.getAllServices();
+    }
+
+    private void handleServiceResolved(EnqueuedServiceDetails enqueuedServiceDetails) {
+        final ServiceDetails serviceDetails = enqueuedServiceDetails.getServiceDetails();
+        final Object[] constructorInstances = enqueuedServiceDetails.getConstructorInstances();
+
+        this.instantiationService.createInstance(
+                serviceDetails,
+                constructorInstances,
+                enqueuedServiceDetails.getFieldInstances()
+        );
+
+        if (serviceDetails.getScopeType() == ScopeType.PROXY) {
+            ProxyUtils.createProxyInstance(serviceDetails, enqueuedServiceDetails.getConstructorInstances());
+        }
+
+        this.registerResolvedDependencies(enqueuedServiceDetails);
+        this.registerInstantiatedService(serviceDetails);
+        this.registerBeans(serviceDetails);
     }
 
     /**
@@ -114,15 +118,11 @@ public class ServicesInstantiationServiceImpl implements ServicesInstantiationSe
      * @param serviceDetails given service.
      */
     private void registerBeans(ServiceDetails serviceDetails) {
-        for (Method beanMethod : serviceDetails.getBeans()) {
-            final ServiceBeanDetails beanDetails = new ServiceBeanDetails(
-                    beanMethod.getReturnType(),
-                    beanMethod, serviceDetails,
-                    AliasFinder.getAnnotation(beanMethod.getDeclaredAnnotations(), Bean.class)
-            );
-
+        for (ServiceBeanDetails beanDetails : serviceDetails.getBeans()) {
             this.instantiationService.createBeanInstance(beanDetails);
-            ProxyUtils.createBeanProxyInstance(beanDetails);
+            if (beanDetails.getScopeType() == ScopeType.PROXY) {
+                ProxyUtils.createBeanProxyInstance(beanDetails);
+            }
 
             this.registerInstantiatedService(beanDetails);
         }
@@ -136,124 +136,53 @@ public class ServicesInstantiationServiceImpl implements ServicesInstantiationSe
      * @param newlyCreatedService - the created service.
      */
     private void registerInstantiatedService(ServiceDetails newlyCreatedService) {
-        if (!(newlyCreatedService instanceof ServiceBeanDetails)) {
-            this.updatedDependantServices(newlyCreatedService);
-        }
-
-        this.instantiatedServices.add(newlyCreatedService);
+        this.tempContainer.getAllServices().add(newlyCreatedService);
 
         for (EnqueuedServiceDetails enqueuedService : this.enqueuedServiceDetails) {
-            if (enqueuedService.isDependencyRequired(newlyCreatedService.getServiceType())) {
-                enqueuedService.addDependencyInstance(newlyCreatedService.getProxyInstance());
-            }
+            this.addDependencyIfRequired(enqueuedService, newlyCreatedService);
         }
     }
 
-    /**
-     * Gets all dependencies of the given new service.
-     * <p>
-     * For each dependency, in the form of {@link ServiceDetails}
-     * adds itself to its dependant services list.
-     *
-     * @param newService - the newly created service.
-     */
-    private void updatedDependantServices(ServiceDetails newService) {
-        for (Class<?> parameterType : newService.getTargetConstructor().getParameterTypes()) {
-            for (ServiceDetails serviceDetails : this.instantiatedServices) {
-                if (parameterType.isAssignableFrom(serviceDetails.getServiceType())) {
-                    serviceDetails.addDependantService(newService);
-                }
-            }
+    private void addDependencyIfRequired(EnqueuedServiceDetails enqueuedService, ServiceDetails newlyCreatedService) {
+        if (this.dependencyResolveService.isDependencyRequired(enqueuedService, newlyCreatedService)) {
+            this.dependencyResolveService.addDependency(
+                    enqueuedService,
+                    this.tempContainer.getServiceDetails(
+                            newlyCreatedService.getServiceType(),
+                            newlyCreatedService.getInstanceName()
+                    )
+            );
+
+            this.addDependencyIfRequired(enqueuedService, newlyCreatedService);
         }
+    }
+
+    private void registerResolvedDependencies(EnqueuedServiceDetails enqueuedServiceDetails) {
+        final ServiceDetails serviceDetails = enqueuedServiceDetails.getServiceDetails();
+
+        serviceDetails.setResolvedConstructorParams(enqueuedServiceDetails.getConstructorParams());
+        serviceDetails.setResolvedFields(enqueuedServiceDetails.getFieldDependencies());
     }
 
     /**
      * Adds each service to the enqueuedServiceDetails.
-     * Adds each service type to allAvailableClasses.
-     * Adds all beans that can be loaded from each service
-     * to allAvailableClasses.
+     * Initializes {@link DependencyResolveService}.
      *
      * @param mappedServices set of mapped services and their information.
      */
     private void init(Set<ServiceDetails> mappedServices) {
         this.enqueuedServiceDetails.clear();
-        this.allAvailableClasses.clear();
-        this.instantiatedServices.clear();
+        this.tempContainer.init(new ArrayList<>(), new ArrayList<>(), new ObjectInstantiationServiceImpl());
 
         for (ServiceDetails serviceDetails : mappedServices) {
             this.enqueuedServiceDetails.add(new EnqueuedServiceDetails(serviceDetails));
-            this.allAvailableClasses.add(serviceDetails.getServiceType());
-            this.allAvailableClasses.addAll(Arrays.stream(serviceDetails.getBeans())
-                    .map(Method::getReturnType)
-                    .collect(Collectors.toList())
-            );
         }
-
-        //If services are provided through config, add them to the list of available classes and instances.
-        this.allAvailableClasses.addAll(this.configuration.getProvidedServices()
-                .stream()
-                .map(ServiceDetails::getServiceType)
-                .collect(Collectors.toList())
-        );
 
         for (ServiceDetails instantiatedService : this.configuration.getProvidedServices()) {
             this.registerInstantiatedService(instantiatedService);
         }
 
-        this.setDependencyRequirements();
-    }
-
-    /**
-     * Checks if the client has a service that will never be instantiated because
-     * it has a dependency that is not present in the application context.
-     * <p>
-     * If {@link Nullable} annotation is present, the missing dependency is considered valid.
-     */
-    private void setDependencyRequirements() {
-        for (EnqueuedServiceDetails enqueuedService : this.enqueuedServiceDetails) {
-            for (Parameter parameter : enqueuedService.getServiceDetails().getTargetConstructor().getParameters()) {
-                final Class<?> dependency = parameter.getType();
-
-                if (this.isAssignableTypePresent(dependency)) {
-                    continue;
-                }
-
-                if (AliasFinder.isAnnotationPresent(parameter.getDeclaredAnnotations(), Nullable.class)) {
-                    enqueuedService.setDependencyNotNull(dependency, false);
-                } else throw new ServiceInstantiationException(
-                        String.format(COULD_NOT_FIND_CONSTRUCTOR_PARAM_MSG,
-                                enqueuedService.getServiceDetails().getServiceType().getName(),
-                                dependency.getName()
-                        )
-                );
-            }
-
-            //Check for @Autowired annotated fields.
-            for (Field autowireAnnotatedField : enqueuedService.getServiceDetails().getAutowireAnnotatedFields()) {
-                if (!this.isAssignableTypePresent(autowireAnnotatedField.getType())) {
-                    throw new ServiceInstantiationException(
-                            String.format(COULD_NOT_FIND_FIELD_PARAM_MSG,
-                                    enqueuedService.getServiceDetails().getServiceType().getName(),
-                                    autowireAnnotatedField.getType().getName()
-                            )
-                    );
-                }
-            }
-        }
-    }
-
-    /**
-     * @param cls given type.
-     * @return true if allAvailableClasses contains a type
-     * that is compatible with the given type.
-     */
-    private boolean isAssignableTypePresent(Class<?> cls) {
-        for (Class<?> serviceType : this.allAvailableClasses) {
-            if (cls.isAssignableFrom(serviceType)) {
-                return true;
-            }
-        }
-
-        return false;
+        this.dependencyResolveService.init(mappedServices);
+        this.dependencyResolveService.checkDependencies(this.enqueuedServiceDetails);
     }
 }

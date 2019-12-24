@@ -1,13 +1,17 @@
 package com.cyecize.ioc.services;
 
 import com.cyecize.ioc.annotations.Autowired;
+import com.cyecize.ioc.enums.ScopeType;
 import com.cyecize.ioc.exceptions.AlreadyInitializedException;
+import com.cyecize.ioc.middleware.DependencyResolver;
+import com.cyecize.ioc.models.DependencyParam;
 import com.cyecize.ioc.models.ServiceBeanDetails;
 import com.cyecize.ioc.models.ServiceDetails;
+import com.cyecize.ioc.utils.ServiceCompatibilityUtils;
 
 import java.lang.annotation.Annotation;
-import java.lang.reflect.Field;
-import java.util.*;
+import java.util.Collection;
+import java.util.List;
 import java.util.stream.Collectors;
 
 /**
@@ -16,17 +20,11 @@ import java.util.stream.Collectors;
  * Contains functionality for managing the application context
  * by reloading or accessing certain services.
  */
-public class DependencyContainerImpl implements DependencyContainer {
+public class DependencyContainerInternal implements DependencyContainer {
 
     private static final String ALREADY_INITIALIZED_MSG = "Dependency container already initialized.";
 
     private static final String SERVICE_NOT_FOUND_FORMAT = "Service \"%s\" was not found.";
-
-    private final Map<Class<?>, ServiceDetails> cachedServices;
-
-    private final Map<Class<?>, Collection<ServiceDetails>> cachedImplementations;
-
-    private final Map<Class<? extends Annotation>, Collection<ServiceDetails>> cachedServicesByAnnotation;
 
     private boolean isInit;
 
@@ -36,15 +34,13 @@ public class DependencyContainerImpl implements DependencyContainer {
 
     private ObjectInstantiationService instantiationService;
 
-    public DependencyContainerImpl() {
-        this.cachedServices = new HashMap<>();
-        this.cachedImplementations = new HashMap<>();
-        this.cachedServicesByAnnotation = new HashMap<>();
+    public DependencyContainerInternal() {
         this.isInit = false;
     }
 
     @Override
-    public void init(Collection<Class<?>> locatedClasses, Collection<ServiceDetails> servicesAndBeans, ObjectInstantiationService instantiationService) throws AlreadyInitializedException {
+    public void init(Collection<Class<?>> locatedClasses, Collection<ServiceDetails> servicesAndBeans,
+                     ObjectInstantiationService instantiationService) throws AlreadyInitializedException {
         if (this.isInit) {
             throw new AlreadyInitializedException(ALREADY_INITIALIZED_MSG);
         }
@@ -65,72 +61,18 @@ public class DependencyContainerImpl implements DependencyContainer {
     @Override
     public void reload(ServiceDetails serviceDetails) {
         this.instantiationService.destroyInstance(serviceDetails);
-        this.handleReload(serviceDetails);
+        final Object newInstance = this.getNewInstance(serviceDetails.getServiceType(), serviceDetails.getInstanceName());
+        serviceDetails.setInstance(newInstance);
     }
 
     @Override
     public void reload(Class<?> serviceType) {
-        final ServiceDetails serviceDetails = this.getServiceDetails(serviceType);
+        final ServiceDetails serviceDetails = this.findServiceDetails(serviceType, null);
         if (serviceDetails == null) {
             throw new IllegalArgumentException(String.format(SERVICE_NOT_FOUND_FORMAT, serviceType));
         }
 
         this.reload(serviceDetails);
-    }
-
-    /**
-     * Handles different types of service.
-     * <p>
-     * If the service is bean, it does not have a constructor, but an origin method.
-     *
-     * @param serviceDetails - target service.
-     */
-    private void handleReload(ServiceDetails serviceDetails) {
-        final Object newInstance = this.getNewInstance(serviceDetails.getServiceType());
-        serviceDetails.setInstance(newInstance);
-
-        if (serviceDetails instanceof ServiceBeanDetails) {
-            if (!((ServiceBeanDetails) serviceDetails).hasProxyInstance()) {
-                //Since bean has no proxy, reload all dependant classes.
-                for (ServiceDetails dependantService : serviceDetails.getDependantServices()) {
-                    this.reload(dependantService);
-                }
-            }
-        }
-    }
-
-    /**
-     * Gets instances of all required dependencies for a given service.
-     *
-     * @param serviceDetails - the given service.
-     * @return array of instantiated dependencies.
-     */
-    private Object[] collectDependencies(ServiceDetails serviceDetails) {
-        final Class<?>[] parameterTypes = serviceDetails.getTargetConstructor().getParameterTypes();
-        final Object[] dependencyInstances = new Object[parameterTypes.length];
-
-        for (int i = 0; i < parameterTypes.length; i++) {
-            dependencyInstances[i] = this.getService(parameterTypes[i]);
-        }
-
-        return dependencyInstances;
-    }
-
-    /**
-     * Gets instances of all {@link Autowired} annotated dependencies for a given service.
-     *
-     * @param serviceDetails - the given service.
-     * @return array of instantiated dependencies.
-     */
-    private Object[] collectAutowiredFieldsDependencies(ServiceDetails serviceDetails) {
-        final Field[] autowireAnnotatedFields = serviceDetails.getAutowireAnnotatedFields();
-        final Object[] instances = new Object[autowireAnnotatedFields.length];
-
-        for (int i = 0; i < autowireAnnotatedFields.length; i++) {
-            instances[i] = this.getService(autowireAnnotatedFields[i].getType());
-        }
-
-        return instances;
     }
 
     /**
@@ -156,7 +98,7 @@ public class DependencyContainerImpl implements DependencyContainer {
 
     @Override
     public void update(Class<?> serviceType, Object serviceInstance, boolean destroyOldInstance) {
-        final ServiceDetails serviceDetails = this.getServiceDetails(serviceType);
+        final ServiceDetails serviceDetails = this.findServiceDetails(serviceType, null);
         if (serviceDetails == null) {
             throw new IllegalArgumentException(String.format(SERVICE_NOT_FOUND_FORMAT, serviceType.getName()));
         }
@@ -175,22 +117,36 @@ public class DependencyContainerImpl implements DependencyContainer {
      * @param <T>         generic type.
      * @return instance of the required service or null.
      */
-    @SuppressWarnings("unchecked")
     @Override
     public <T> T getService(Class<T> serviceType) {
-        final ServiceDetails serviceDetails = this.getServiceDetails(serviceType);
+        return this.getService(serviceType, null);
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public <T> T getService(Class<?> serviceType, String instanceName) {
+        final ServiceDetails serviceDetails = this.getServiceDetails(serviceType, instanceName);
 
         if (serviceDetails != null) {
-            return (T) serviceDetails.getProxyInstance();
+            return (T) serviceDetails.getInstance();
+        }
+
+        if (serviceType.isAssignableFrom(this.getClass())) {
+            return (T) this;
         }
 
         return null;
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     public <T> T getNewInstance(Class<?> serviceType) {
-        final ServiceDetails serviceDetails = this.getServiceDetails(serviceType);
+        return this.getNewInstance(serviceType, null);
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public <T> T getNewInstance(Class<?> serviceType, String instanceName) {
+        final ServiceDetails serviceDetails = this.findServiceDetails(serviceType, instanceName);
 
         if (serviceDetails == null) {
             throw new IllegalArgumentException(String.format(SERVICE_NOT_FOUND_FORMAT, serviceType.getName()));
@@ -199,7 +155,7 @@ public class DependencyContainerImpl implements DependencyContainer {
         final Object oldInstance = serviceDetails.getActualInstance();
 
         if (serviceDetails instanceof ServiceBeanDetails) {
-            ServiceBeanDetails serviceBeanDetails = (ServiceBeanDetails) serviceDetails;
+            final ServiceBeanDetails serviceBeanDetails = (ServiceBeanDetails) serviceDetails;
             this.instantiationService.createBeanInstance(serviceBeanDetails);
         } else {
             this.instantiationService.createInstance(
@@ -223,19 +179,39 @@ public class DependencyContainerImpl implements DependencyContainer {
      */
     @Override
     public ServiceDetails getServiceDetails(Class<?> serviceType) {
-        if (this.cachedServices.containsKey(serviceType)) {
-            return this.cachedServices.get(serviceType);
-        }
+        return this.getServiceDetails(serviceType, null);
+    }
 
-        final ServiceDetails serviceDetails = this.servicesAndBeans.stream()
-                .filter(sd -> serviceType.isAssignableFrom(sd.getProxyInstance().getClass()) || serviceType.isAssignableFrom(sd.getServiceType()))
-                .findFirst().orElse(null);
+    /**
+     * Finds a service details instance for a given service type.
+     * Created new instance of that service if the service is with PROTOTYPE scope.
+     *
+     * @param serviceType  - given service type.
+     * @param instanceName - given instance name.
+     * @return service details if found or null.
+     */
+    @Override
+    public ServiceDetails getServiceDetails(Class<?> serviceType, String instanceName) {
+        final ServiceDetails serviceDetails = this.findServiceDetails(serviceType, instanceName);
 
         if (serviceDetails != null) {
-            this.cachedServices.put(serviceType, serviceDetails);
+            if (serviceDetails.getScopeType() == ScopeType.PROTOTYPE) {
+                serviceDetails.setInstance(this.getNewInstance(serviceType, instanceName));
+            }
         }
 
         return serviceDetails;
+    }
+
+    /**
+     * @param serviceType  - given service type.
+     * @param instanceName - given instance name.
+     * @return service details if found or null.
+     */
+    private ServiceDetails findServiceDetails(Class<?> serviceType, String instanceName) {
+        return this.servicesAndBeans.stream()
+                .filter(sd -> ServiceCompatibilityUtils.isServiceCompatible(sd, serviceType, instanceName))
+                .findFirst().orElse(null);
     }
 
     /**
@@ -253,17 +229,9 @@ public class DependencyContainerImpl implements DependencyContainer {
      */
     @Override
     public Collection<ServiceDetails> getImplementations(Class<?> serviceType) {
-        if (this.cachedImplementations.containsKey(serviceType)) {
-            return this.cachedImplementations.get(serviceType);
-        }
-
-        final List<ServiceDetails> implementations = this.servicesAndBeans.stream()
+        return this.servicesAndBeans.stream()
                 .filter(sd -> serviceType.isAssignableFrom(sd.getServiceType()))
                 .collect(Collectors.toList());
-
-        this.cachedImplementations.put(serviceType, implementations);
-
-        return implementations;
     }
 
     /**
@@ -273,24 +241,61 @@ public class DependencyContainerImpl implements DependencyContainer {
      */
     @Override
     public Collection<ServiceDetails> getServicesByAnnotation(Class<? extends Annotation> annotationType) {
-        if (this.cachedServicesByAnnotation.containsKey(annotationType)) {
-            return this.cachedServicesByAnnotation.get(annotationType);
-        }
-
-        final List<ServiceDetails> serviceDetailsByAnnotation = this.servicesAndBeans.stream()
+        return this.servicesAndBeans.stream()
                 .filter(sd -> sd.getAnnotation() != null && sd.getAnnotation().annotationType() == annotationType)
                 .collect(Collectors.toList());
-
-        this.cachedServicesByAnnotation.put(annotationType, serviceDetailsByAnnotation);
-
-        return serviceDetailsByAnnotation;
     }
 
     /**
-     * Gets only the instances of all services.
+     * Gets all services.
      */
     @Override
     public Collection<ServiceDetails> getAllServices() {
         return this.servicesAndBeans;
+    }
+
+    /**
+     * Gets instances of all required dependencies for a given service.
+     *
+     * @param serviceDetails - the given service.
+     * @return array of instantiated dependencies.
+     */
+    private Object[] collectDependencies(ServiceDetails serviceDetails) {
+        return this.getInstances(serviceDetails.getResolvedConstructorParams());
+    }
+
+    /**
+     * Gets instances of all {@link Autowired} annotated dependencies for a given service.
+     *
+     * @param serviceDetails - the given service.
+     * @return array of instantiated dependencies.
+     */
+    private Object[] collectAutowiredFieldsDependencies(ServiceDetails serviceDetails) {
+        return this.getInstances(serviceDetails.getResolvedFields());
+    }
+
+    /**
+     * Iterates array of dependencies and finds their instance.
+     * <p>
+     * If a dependency has a {@link DependencyResolver} it will be used to obtain the value.
+     *
+     * @param dependencyParams - list of dependencies.
+     * @return - array of object instances in the same order as received.
+     */
+    private Object[] getInstances(List<DependencyParam> dependencyParams) {
+        final Object[] instances = new Object[dependencyParams.size()];
+
+        for (int i = 0; i < dependencyParams.size(); i++) {
+            final DependencyParam dependencyParam = dependencyParams.get(i);
+
+            if (dependencyParam.getDependencyResolver() != null) {
+                instances[i] = dependencyParam.getDependencyResolver().resolve(dependencyParam);
+                continue;
+            }
+
+            instances[i] = this.getService(dependencyParam.getDependencyType(), dependencyParam.getInstanceName());
+        }
+
+        return instances;
     }
 }
