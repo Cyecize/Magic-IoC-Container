@@ -1,4 +1,4 @@
-package com.cyecize.ioc.middleware;
+package com.cyecize.ioc.events;
 
 import com.cyecize.ioc.models.ServiceDetails;
 

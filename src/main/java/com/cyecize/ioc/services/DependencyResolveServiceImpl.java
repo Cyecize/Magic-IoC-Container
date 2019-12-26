@@ -4,7 +4,7 @@ import com.cyecize.ioc.annotations.Autowired;
 import com.cyecize.ioc.annotations.Nullable;
 import com.cyecize.ioc.config.configurations.InstantiationConfiguration;
 import com.cyecize.ioc.exceptions.ServiceInstantiationException;
-import com.cyecize.ioc.middleware.DependencyResolver;
+import com.cyecize.ioc.handlers.DependencyResolver;
 import com.cyecize.ioc.models.DependencyParam;
 import com.cyecize.ioc.models.EnqueuedServiceDetails;
 import com.cyecize.ioc.models.ServiceBeanDetails;

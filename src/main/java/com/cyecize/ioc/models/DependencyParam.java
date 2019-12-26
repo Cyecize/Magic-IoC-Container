@@ -1,9 +1,13 @@
 package com.cyecize.ioc.models;
 
-import com.cyecize.ioc.middleware.DependencyResolver;
+import com.cyecize.ioc.annotations.Nullable;
+import com.cyecize.ioc.handlers.DependencyResolver;
 
 import java.lang.annotation.Annotation;
 
+/**
+ * Simple POJO class that keeps information about a dependency parameter for a given service.
+ */
 public class DependencyParam {
 
     private final Class<?> dependencyType;
@@ -16,6 +20,11 @@ public class DependencyParam {
 
     private boolean isRequired;
 
+    /**
+     * A flag about knowing if this dependency parameter could be resolved.
+     * Since dependencies can be {@link Nullable}, this is required in order to make a proper check
+     * if the dependency is resolved.
+     */
     private boolean isValuePresent;
 
     private DependencyResolver dependencyResolver;

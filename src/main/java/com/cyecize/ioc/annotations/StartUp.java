@@ -10,7 +10,7 @@ import java.lang.annotation.Target;
  * MagicInjector has loaded all services and beans.
  * <p>
  * In order for it to work, you need to place it in the startup class and
- * the method should be void with zero params.
+ * the method should be void.
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)

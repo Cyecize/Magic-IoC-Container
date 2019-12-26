@@ -1,7 +1,7 @@
 package com.cyecize.ioc.services;
 
 import com.cyecize.ioc.annotations.*;
-import com.cyecize.ioc.middleware.ServiceDetailsCreated;
+import com.cyecize.ioc.events.ServiceDetailsCreated;
 import com.cyecize.ioc.enums.ScopeType;
 import com.cyecize.ioc.models.ServiceBeanDetails;
 import com.cyecize.ioc.models.ServiceDetails;

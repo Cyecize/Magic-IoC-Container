@@ -3,7 +3,7 @@ package com.cyecize.ioc.services;
 import com.cyecize.ioc.annotations.Autowired;
 import com.cyecize.ioc.enums.ScopeType;
 import com.cyecize.ioc.exceptions.AlreadyInitializedException;
-import com.cyecize.ioc.middleware.DependencyResolver;
+import com.cyecize.ioc.handlers.DependencyResolver;
 import com.cyecize.ioc.models.DependencyParam;
 import com.cyecize.ioc.models.ServiceBeanDetails;
 import com.cyecize.ioc.models.ServiceDetails;

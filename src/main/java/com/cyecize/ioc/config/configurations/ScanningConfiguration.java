@@ -1,6 +1,6 @@
 package com.cyecize.ioc.config.configurations;
 
-import com.cyecize.ioc.middleware.ServiceDetailsCreated;
+import com.cyecize.ioc.events.ServiceDetailsCreated;
 import com.cyecize.ioc.config.BaseSubConfiguration;
 import com.cyecize.ioc.config.MagicConfiguration;
 

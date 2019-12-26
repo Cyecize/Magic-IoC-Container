@@ -3,7 +3,7 @@ package com.cyecize.ioc.config.configurations;
 import com.cyecize.ioc.constants.Constants;
 import com.cyecize.ioc.config.BaseSubConfiguration;
 import com.cyecize.ioc.config.MagicConfiguration;
-import com.cyecize.ioc.middleware.DependencyResolver;
+import com.cyecize.ioc.handlers.DependencyResolver;
 import com.cyecize.ioc.models.ServiceDetails;
 
 import java.util.ArrayList;
