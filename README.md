@@ -57,7 +57,7 @@ by requiring it from the startup method.
 Documentation
 ------------
 Currently there is no real documentation from where you can read, but 
-you can read the javadoc or you can check out the integration tests located::: TODO place link
+you can read the javadoc or you can check out the integration tests located [here](https://github.com/Cyecize/Magic-IoC-Container-Tests)
 Also you can check out [Java Web Server](https://github.com/Cyecize/java-web-server/) 
 where this app is heavily utilized from the MVC framework.
 
