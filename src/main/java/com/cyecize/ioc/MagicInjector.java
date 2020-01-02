@@ -2,10 +2,10 @@ package com.cyecize.ioc;
 
 import com.cyecize.ioc.annotations.StartUp;
 import com.cyecize.ioc.models.ServiceDetails;
-import com.cyecize.ioc.services.*;
 import com.cyecize.ioc.config.MagicConfiguration;
 import com.cyecize.ioc.enums.DirectoryType;
 import com.cyecize.ioc.models.Directory;
+import com.cyecize.ioc.services.*;
 
 import java.io.File;
 import java.lang.reflect.InvocationTargetException;
@@ -58,8 +58,13 @@ public class MagicInjector {
         );
 
         final Set<Class<?>> locatedClasses = new HashSet<>();
+        final List<ServiceDetails> serviceDetails = new ArrayList<>();
 
-        final Thread runner = new Thread(() -> locatedClasses.addAll(locateClasses(startupDirectories)));
+        final Thread runner = new Thread(() -> {
+            locatedClasses.addAll(locateClasses(startupDirectories));
+            final Set<ServiceDetails> mappedServices = new HashSet<>(scanningService.mapServices(locatedClasses));
+            serviceDetails.addAll(new ArrayList<>(instantiationService.instantiateServicesAndBeans(mappedServices)));
+        });
 
         runner.setContextClassLoader(configuration.scanning().getClassLoader());
         runner.start();
@@ -69,8 +74,7 @@ public class MagicInjector {
             throw new RuntimeException(e);
         }
 
-        final Set<ServiceDetails> mappedServices = new HashSet<>(scanningService.mapServices(locatedClasses));
-        final List<ServiceDetails> serviceDetails = new ArrayList<>(instantiationService.instantiateServicesAndBeans(mappedServices));
+
 
         final DependencyContainer dependencyContainer = new DependencyContainerCached();
         dependencyContainer.init(locatedClasses, serviceDetails, objectInstantiationService);
