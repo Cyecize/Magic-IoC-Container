@@ -1,6 +1,12 @@
 package com.cyecize.ioc.services;
 
-import com.cyecize.ioc.annotations.*;
+import com.cyecize.ioc.annotations.Autowired;
+import com.cyecize.ioc.annotations.Bean;
+import com.cyecize.ioc.annotations.NamedInstance;
+import com.cyecize.ioc.annotations.PostConstruct;
+import com.cyecize.ioc.annotations.PreDestroy;
+import com.cyecize.ioc.annotations.Scope;
+import com.cyecize.ioc.annotations.Service;
 import com.cyecize.ioc.events.ServiceDetailsCreated;
 import com.cyecize.ioc.enums.ScopeType;
 import com.cyecize.ioc.models.ServiceBeanDetails;
@@ -70,10 +76,7 @@ public class ServicesScanningServiceImpl implements ServicesScanningService {
             );
 
             serviceDetails.setBeans(this.findBeans(serviceDetails));
-
-            for (ServiceDetailsCreated callback : this.configuration.getServiceDetailsCreatedCallbacks()) {
-                callback.serviceDetailsCreated(serviceDetails);
-            }
+            this.notifyServiceDetailsCreated(serviceDetails);
 
             serviceDetailsStorage.add(serviceDetails);
         }
@@ -191,6 +194,20 @@ public class ServicesScanningServiceImpl implements ServicesScanningService {
         }
 
         return beans;
+    }
+
+    /**
+     * Iterates all events provided by the user and calls them with the newly mapped service and beans.
+     *
+     * @param serviceDetails - newly mapped service.
+     */
+    private void notifyServiceDetailsCreated(ServiceDetails serviceDetails) {
+        for (ServiceDetailsCreated callback : this.configuration.getServiceDetailsCreatedCallbacks()) {
+            callback.serviceDetailsCreated(serviceDetails);
+            for (ServiceBeanDetails bean : serviceDetails.getBeans()) {
+                callback.serviceDetailsCreated(bean);
+            }
+        }
     }
 
     /**
