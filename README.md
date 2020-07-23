@@ -44,7 +44,7 @@ AliasFor works with Autowired, NamedInstance, Nullable, PostConstruct, PreDestro
 * NamedInstance - Specify the name of the service / bean.
 * Nullable - required dependency can be null.
 * Qualifier - Specify the name of the dependency that you are requiring.
-* Scope - Specify the scope of the service. SINGLETON, PROTOTYPE or PROXY.
+* Scope - Specify the scope of the service. **SINGLETON**, **PROTOTYPE** or **PROXY**.
 
 You can use the configuration to provide custom annotations that can act like @Bean and @Service.
 
