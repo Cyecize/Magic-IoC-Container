@@ -1,11 +1,15 @@
 package com.cyecize.ioc.config.configurations;
 
-import com.cyecize.ioc.events.ServiceDetailsCreated;
 import com.cyecize.ioc.config.BaseSubConfiguration;
 import com.cyecize.ioc.config.MagicConfiguration;
+import com.cyecize.ioc.events.ServiceDetailsCreated;
 
 import java.lang.annotation.Annotation;
-import java.util.*;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
 public class ScanningConfiguration extends BaseSubConfiguration {
 

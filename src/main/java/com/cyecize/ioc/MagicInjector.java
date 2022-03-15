@@ -1,17 +1,30 @@
 package com.cyecize.ioc;
 
 import com.cyecize.ioc.annotations.StartUp;
-import com.cyecize.ioc.models.ServiceDetails;
 import com.cyecize.ioc.config.MagicConfiguration;
 import com.cyecize.ioc.enums.DirectoryType;
 import com.cyecize.ioc.models.Directory;
-import com.cyecize.ioc.services.*;
+import com.cyecize.ioc.models.ServiceDetails;
+import com.cyecize.ioc.services.ClassLocator;
+import com.cyecize.ioc.services.ClassLocatorForDirectory;
+import com.cyecize.ioc.services.ClassLocatorForJarFile;
+import com.cyecize.ioc.services.DependencyContainer;
+import com.cyecize.ioc.services.DependencyContainerCached;
+import com.cyecize.ioc.services.DependencyResolveServiceImpl;
+import com.cyecize.ioc.services.DirectoryResolver;
+import com.cyecize.ioc.services.DirectoryResolverImpl;
+import com.cyecize.ioc.services.ObjectInstantiationService;
+import com.cyecize.ioc.services.ObjectInstantiationServiceImpl;
+import com.cyecize.ioc.services.ServicesInstantiationService;
+import com.cyecize.ioc.services.ServicesInstantiationServiceImpl;
+import com.cyecize.ioc.services.ServicesScanningService;
+import com.cyecize.ioc.services.ServicesScanningServiceImpl;
 
 import java.io.File;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.Arrays;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -73,7 +86,6 @@ public class MagicInjector {
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
-
 
 
         final DependencyContainer dependencyContainer = new DependencyContainerCached();
