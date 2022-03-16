@@ -8,7 +8,10 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Simple POJO class that holds information about a given class.
@@ -85,6 +88,8 @@ public class ServiceDetails {
      * Collection with details about resolved {@link Autowired} field dependencies.
      */
     private LinkedList<DependencyParam> resolvedFields;
+
+    private final Map<Method, List<MethodAspectHandlerDto>> methodAspectHandlers = new HashMap<>();
 
     protected ServiceDetails() {
 
@@ -225,6 +230,14 @@ public class ServiceDetails {
 
     public void setResolvedFields(LinkedList<DependencyParam> resolvedFields) {
         this.resolvedFields = resolvedFields;
+    }
+
+    public Map<Method, List<MethodAspectHandlerDto>> getMethodAspectHandlers() {
+        return this.methodAspectHandlers;
+    }
+
+    public void setMethodAspectHandlers(Map<Method, List<MethodAspectHandlerDto>> methodAspectHandlers) {
+        this.methodAspectHandlers.putAll(methodAspectHandlers);
     }
 
     /**
