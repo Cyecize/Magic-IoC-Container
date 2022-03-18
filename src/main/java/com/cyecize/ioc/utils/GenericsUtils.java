@@ -2,6 +2,7 @@ package com.cyecize.ioc.utils;
 
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
+import java.lang.reflect.WildcardType;
 import java.util.Arrays;
 import java.util.Optional;
 
@@ -33,5 +34,35 @@ public class GenericsUtils {
         }
 
         return null;
+    }
+
+
+    public static Class<?> getRawType(ParameterizedType type) {
+        return getRawType(type, null);
+    }
+
+    /**
+     * Search and find real generic value.
+     * Eg:
+     * private List<String> - will return String
+     * private List<Set<List<Integer>>> - will return Integer
+     *
+     * @param type - parameterized type
+     * @return raw type
+     */
+    private static Class<?> getRawType(ParameterizedType type, Class<?> lastType) {
+        final Type actualTypeArgument = type.getActualTypeArguments()[0];
+        if (actualTypeArgument instanceof Class) {
+            return (Class<?>) actualTypeArgument;
+        }
+
+        if (actualTypeArgument instanceof WildcardType) {
+            return lastType;
+        }
+
+        return getRawType(
+                (ParameterizedType) actualTypeArgument,
+                (Class<?>) ((ParameterizedType) actualTypeArgument).getRawType()
+        );
     }
 }

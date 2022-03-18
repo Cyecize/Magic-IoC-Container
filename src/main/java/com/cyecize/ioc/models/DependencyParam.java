@@ -2,8 +2,10 @@ package com.cyecize.ioc.models;
 
 import com.cyecize.ioc.annotations.Nullable;
 import com.cyecize.ioc.handlers.DependencyResolver;
+import com.cyecize.ioc.utils.ServiceCompatibilityUtils;
 
 import java.lang.annotation.Annotation;
+import java.util.List;
 
 /**
  * Simple POJO class that keeps information about a dependency parameter for a given service.
@@ -11,6 +13,8 @@ import java.lang.annotation.Annotation;
 public class DependencyParam {
 
     private final Class<?> dependencyType;
+
+    private List<Class<?>> allAvailableCompatibleClasses;
 
     private final String instanceName;
 
@@ -39,6 +43,14 @@ public class DependencyParam {
 
     public Class<?> getDependencyType() {
         return this.dependencyType;
+    }
+
+    public List<Class<?>> getAllAvailableCompatibleClasses() {
+        return this.allAvailableCompatibleClasses;
+    }
+
+    public void setAllAvailableCompatibleClasses(List<Class<?>> allAvailableCompatibleClasses) {
+        this.allAvailableCompatibleClasses = allAvailableCompatibleClasses;
     }
 
     public String getInstanceName() {
@@ -79,5 +91,13 @@ public class DependencyParam {
 
     public void setDependencyResolver(DependencyResolver dependencyResolver) {
         this.dependencyResolver = dependencyResolver;
+    }
+
+    public boolean isUnresolved() {
+        return this.getInstance() == null && this.isValuePresent();
+    }
+
+    public boolean isCompatible(ServiceDetails serviceDetails) {
+        return ServiceCompatibilityUtils.isServiceCompatible(serviceDetails, this.dependencyType, this.instanceName);
     }
 }

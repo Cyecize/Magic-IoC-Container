@@ -107,7 +107,9 @@ public class DependencyResolveServiceImpl implements DependencyResolveService {
                 continue;
             }
 
-            if (this.isAssignableTypePresent(dependencyType)) {
+            final List<Class<?>> allAssignableTypesPresent = this.findAllAssignableTypesPresent(dependencyType);
+            dependencyParam.setAllAvailableCompatibleClasses(allAssignableTypesPresent);
+            if (!allAssignableTypesPresent.isEmpty()) {
                 dependencyParam.setValuePresent(true);
                 continue;
             }
@@ -179,17 +181,17 @@ public class DependencyResolveServiceImpl implements DependencyResolveService {
 
     /**
      * @param cls given type.
-     * @return true if allAvailableClasses contains a type
-     * that is compatible with the given type.
+     * @return all of allAvailableClasses that are compatible with the given type
      */
-    private boolean isAssignableTypePresent(Class<?> cls) {
+    private List<Class<?>> findAllAssignableTypesPresent(Class<?> cls) {
+        final List<Class<?>> compatibleClasses = new ArrayList<>();
         for (Class<?> serviceType : this.allAvailableClasses) {
             if (cls.isAssignableFrom(serviceType)) {
-                return true;
+                compatibleClasses.add(serviceType);
             }
         }
 
-        return false;
+        return compatibleClasses;
     }
 
     private boolean isNamedInstancePresent(Class<?> cls, String nameOfInstance) {
