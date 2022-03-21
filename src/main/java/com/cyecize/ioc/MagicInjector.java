@@ -67,19 +67,30 @@ public class MagicInjector {
 
         final Set<Class<?>> locatedClasses = new HashSet<>();
         final List<ServiceDetails> serviceDetails = new ArrayList<>();
-
-        final Thread runner = new Thread(() -> {
+        final Runnable runnable = () -> {
             locatedClasses.addAll(locateClasses(startupDirectories));
             final Set<ServiceDetails> mappedServices = new HashSet<>(scanningService.mapServices(locatedClasses));
             serviceDetails.addAll(new ArrayList<>(instantiationService.instantiateServicesAndBeans(mappedServices)));
-        });
+        };
 
-        runner.setContextClassLoader(configuration.scanning().getClassLoader());
-        runner.start();
-        try {
-            runner.join();
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
+        if (configuration.general().isRunInNewThread()) {
+            final Thread runner = new Thread(runnable);
+
+            runner.setContextClassLoader(configuration.scanning().getClassLoader());
+            runner.start();
+            try {
+                runner.join();
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        } else {
+            final ClassLoader oldCl = Thread.currentThread().getContextClassLoader();
+            try {
+                Thread.currentThread().setContextClassLoader(configuration.scanning().getClassLoader());
+                runnable.run();
+            } finally {
+                Thread.currentThread().setContextClassLoader(oldCl);
+            }
         }
 
         return new DependencyContainerCached(locatedClasses, serviceDetails);
