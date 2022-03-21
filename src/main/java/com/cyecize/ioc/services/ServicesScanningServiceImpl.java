@@ -18,7 +18,6 @@ import com.cyecize.ioc.models.ServiceDetails;
 import com.cyecize.ioc.utils.AliasFinder;
 import com.cyecize.ioc.utils.AnnotationUtils;
 import com.cyecize.ioc.utils.GenericsUtils;
-import com.cyecize.ioc.utils.ServiceDetailsConstructComparator;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Constructor;
@@ -29,11 +28,9 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 /**
  * {@link ServicesScanningService} implementation.
@@ -90,9 +87,7 @@ public class ServicesScanningServiceImpl implements ServicesScanningService {
         }
 
         this.applyAspectHandlerServices(aspectHandlerServices, serviceDetailsStorage);
-        return serviceDetailsStorage.stream()
-                .sorted(new ServiceDetailsConstructComparator())
-                .collect(Collectors.toCollection(LinkedHashSet::new));
+        return serviceDetailsStorage;
     }
 
     /**

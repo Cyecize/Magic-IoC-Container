@@ -29,10 +29,14 @@ public class EnqueuedServiceDetails {
      */
     private final LinkedList<DependencyParam> constructorParams;
 
+    private Object[] constructorInstances;
+
     /**
      * List of dependencies that are required from {@link Autowired} annotated fields.
      */
     private final LinkedList<DependencyParam> fieldDependencies;
+
+    private Object[] fieldInstances;
 
     public EnqueuedServiceDetails(ServiceDetails serviceDetails) {
         this.serviceDetails = serviceDetails;
@@ -51,9 +55,13 @@ public class EnqueuedServiceDetails {
     }
 
     public Object[] getConstructorInstances() {
-        return this.constructorParams.stream()
-                .map(DependencyParam::getInstance)
-                .toArray(Object[]::new);
+        if (this.constructorInstances == null) {
+            this.constructorInstances = this.constructorParams.stream()
+                    .map(DependencyParam::getInstance)
+                    .toArray(Object[]::new);
+        }
+
+        return this.constructorInstances;
     }
 
     public LinkedList<DependencyParam> getFieldDependencies() {
@@ -61,9 +69,13 @@ public class EnqueuedServiceDetails {
     }
 
     public Object[] getFieldInstances() {
-        return this.fieldDependencies.stream()
-                .map(DependencyParam::getInstance)
-                .toArray(Object[]::new);
+        if (this.fieldInstances == null) {
+            this.fieldInstances = this.fieldDependencies.stream()
+                    .map(DependencyParam::getInstance)
+                    .toArray(Object[]::new);
+        }
+
+        return this.fieldInstances;
     }
 
     private void fillConstructorParams() {
@@ -112,5 +124,19 @@ public class EnqueuedServiceDetails {
     @Override
     public String toString() {
         return this.serviceDetails.getServiceType().getName();
+    }
+
+    @Override
+    public boolean equals(Object other) {
+        if (!(other instanceof EnqueuedServiceDetails)) {
+            return false;
+        }
+
+        return this.serviceDetails.equals(((EnqueuedServiceDetails) other).getServiceDetails());
+    }
+
+    @Override
+    public int hashCode() {
+        return this.serviceDetails.hashCode();
     }
 }

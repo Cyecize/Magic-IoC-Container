@@ -5,7 +5,9 @@ import com.cyecize.ioc.models.ServiceDetails;
 import java.lang.annotation.Annotation;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class DependencyContainerCached extends DependencyContainerInternal {
 
@@ -15,10 +17,11 @@ public class DependencyContainerCached extends DependencyContainerInternal {
 
     private final Map<Class<? extends Annotation>, Collection<ServiceDetails>> cachedServicesByAnnotation;
 
-    public DependencyContainerCached() {
+    public DependencyContainerCached(Set<Class<?>> locatedClasses, List<ServiceDetails> serviceDetails) {
         this.cachedServices = new HashMap<>();
         this.cachedImplementations = new HashMap<>();
         this.cachedServicesByAnnotation = new HashMap<>();
+        this.init(locatedClasses, serviceDetails);
     }
 
     @Override

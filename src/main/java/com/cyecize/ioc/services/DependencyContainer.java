@@ -1,14 +1,11 @@
 package com.cyecize.ioc.services;
 
-import com.cyecize.ioc.exceptions.AlreadyInitializedException;
 import com.cyecize.ioc.models.ServiceDetails;
 
 import java.lang.annotation.Annotation;
 import java.util.Collection;
 
 public interface DependencyContainer {
-
-    void init(Collection<Class<?>> locatedClasses, Collection<ServiceDetails> servicesAndBeans, ObjectInstantiationService instantiationService) throws AlreadyInitializedException;
 
     void reload(ServiceDetails serviceDetails);
 

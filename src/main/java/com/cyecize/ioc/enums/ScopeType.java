@@ -1,6 +1,6 @@
 package com.cyecize.ioc.enums;
 
-public enum  ScopeType {
+public enum ScopeType {
     /**
      * Single instance for the whole lifespan of the app.
      */

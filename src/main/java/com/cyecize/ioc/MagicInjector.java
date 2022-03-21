@@ -13,8 +13,6 @@ import com.cyecize.ioc.services.DependencyContainerCached;
 import com.cyecize.ioc.services.DependencyResolveServiceImpl;
 import com.cyecize.ioc.services.DirectoryResolver;
 import com.cyecize.ioc.services.DirectoryResolverImpl;
-import com.cyecize.ioc.services.ObjectInstantiationService;
-import com.cyecize.ioc.services.ObjectInstantiationServiceImpl;
 import com.cyecize.ioc.services.ServicesInstantiationService;
 import com.cyecize.ioc.services.ServicesInstantiationServiceImpl;
 import com.cyecize.ioc.services.ServicesScanningService;
@@ -63,10 +61,7 @@ public class MagicInjector {
 
     public static DependencyContainer run(File[] startupDirectories, MagicConfiguration configuration) {
         final ServicesScanningService scanningService = new ServicesScanningServiceImpl(configuration.scanning());
-        final ObjectInstantiationService objectInstantiationService = new ObjectInstantiationServiceImpl();
         final ServicesInstantiationService instantiationService = new ServicesInstantiationServiceImpl(
-                configuration.instantiations(),
-                objectInstantiationService,
                 new DependencyResolveServiceImpl(configuration.instantiations())
         );
 
@@ -87,11 +82,7 @@ public class MagicInjector {
             throw new RuntimeException(e);
         }
 
-
-        final DependencyContainer dependencyContainer = new DependencyContainerCached();
-        dependencyContainer.init(locatedClasses, serviceDetails, objectInstantiationService);
-
-        return dependencyContainer;
+        return new DependencyContainerCached(locatedClasses, serviceDetails);
     }
 
     private static Set<Class<?>> locateClasses(File[] startupDirectories) {

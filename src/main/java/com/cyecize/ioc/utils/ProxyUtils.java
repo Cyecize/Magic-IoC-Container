@@ -33,7 +33,7 @@ public class ProxyUtils {
             return;
         }
 
-       final Object proxyInstance = Proxy.newProxyInstance(
+        final Object proxyInstance = Proxy.newProxyInstance(
                 serviceDetails.getServiceType().getClassLoader(),
                 new Class[]{serviceDetails.getServiceType()},
                 new InvocationHandlerImpl(serviceDetails));

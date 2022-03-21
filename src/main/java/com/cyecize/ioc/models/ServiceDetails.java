@@ -2,6 +2,7 @@ package com.cyecize.ioc.models;
 
 import com.cyecize.ioc.annotations.Autowired;
 import com.cyecize.ioc.enums.ScopeType;
+import com.cyecize.ioc.utils.ObjectInstantiationUtils;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Constructor;
@@ -12,6 +13,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * Simple POJO class that holds information about a given class.
@@ -48,6 +50,11 @@ public class ServiceDetails {
      * Service instance.
      */
     private Object instance;
+
+    /**
+     * Flag used for PROTOTYPE scoped service to ensure instance is not left unused.
+     */
+    protected boolean instanceRequested;
 
     /**
      * Proxy instance that will be injected into services instead of actual instance.
@@ -149,6 +156,19 @@ public class ServiceDetails {
     }
 
     public Object getInstance() {
+        if (this.getScopeType() == ScopeType.PROTOTYPE) {
+            if (this.instance == null) {
+                return null;
+            }
+
+            if (!this.instanceRequested) {
+                this.instanceRequested = true;
+                return this.instance;
+            }
+
+            return ObjectInstantiationUtils.createNewInstance(this);
+        }
+
         if (this.proxyInstance != null) {
             return this.proxyInstance;
         }
@@ -253,6 +273,23 @@ public class ServiceDetails {
         }
 
         return this.serviceType.hashCode();
+    }
+
+    @Override
+    public boolean equals(Object other) {
+        if (!(other instanceof ServiceDetails)) {
+            return false;
+        }
+
+        if (this.serviceType == null) {
+            return super.equals(other);
+        }
+
+        final ServiceDetails otherService = (ServiceDetails) other;
+        return Objects.equals(otherService.getInstanceName(), this.getInstanceName())
+                && Objects.equals(otherService.getAnnotation(), this.getAnnotation())
+                && Objects.equals(otherService.getServiceType(), this.getServiceType())
+                && Objects.equals(otherService.getScopeType(), this.getScopeType());
     }
 
     @Override
