@@ -6,7 +6,7 @@
 
     <groupId>com.demo</groupId>
     <artifactId>magic-injector</artifactId>
-    <version>1.2</version>
+    <version>2.0</version>
     <build>
         <plugins>
             <plugin>
@@ -20,7 +20,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
-                <version>3.2.1</version>
+                <version>3.2.4</version>
                 <configuration>
                     <!-- put your configurations here -->
                 </configuration>
@@ -41,10 +41,14 @@
         <dependency>
             <groupId>org.javassist</groupId>
             <artifactId>javassist</artifactId>
-            <version>3.25.0-GA</version>
+            <version>3.28.0-GA</version>
         </dependency>
 
     </dependencies>
 </project>
 
-<!-- mvn deploy:deploy-file -Durl=file://C:\_projects\javache\LocalRepository -Dfile=original-magic-injector-1.2.jar -DgroupId=com.cyecize  -DartifactId=ioc -Dpackaging=jar -Dversion=1.2 -DpomFile=../ioc.pom -->
+<!--
+
+mvn deploy:deploy-file -Durl=file://C:\_projects\javache\LocalRepository -Dfile="original-magic-injector-2.0.jar" -DgroupId=com.cyecize  -DartifactId=ioc -Dpackaging=jar -Dversion="2.0" -DpomFile=../ioc.pom
+
+-->
