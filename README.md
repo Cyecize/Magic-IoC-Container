@@ -12,6 +12,7 @@ Main Features
 * Manage instantiated services (get them by annotation, qualifier, type)
 * Reload instantiated services
 * Handle custom service and bean scopes by using proxies.
+* Enrich your service with aspects
 
 The Goal
 -----------------------
